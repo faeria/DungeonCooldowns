@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.2.0
+
+- Refonte visuelle complète du sélecteur de sorts et correction des textures de checkbox étirées.
+- Détection des cadres `CompactPartyFrame` et `CompactRaidFrame1…5` pour un aperçu réellement collé aux raid frames visibles.
+- Ajout de l’alignement haut/centre/bas, des décalages X/Y et de la distance à la frame.
+- Ajout des espacements horizontal et vertical, de l’opacité, du style et de l’épaisseur de bordure.
+- Nouveau cadre de secours reprenant visuellement une raid frame lorsque aucun cadre Blizzard n’est disponible.
+
 ## 1.1.0
 
 - Ajout d’un sélecteur de cooldowns par classe et spécialisation.

@@ -12,6 +12,15 @@ local SETTING_VARIABLES = {
     showReady = "DUNGEON_COOLDOWNS_SHOW_READY",
     side = "DUNGEON_COOLDOWNS_SIDE",
     iconSize = "DUNGEON_COOLDOWNS_ICON_SIZE",
+    spacing = "DUNGEON_COOLDOWNS_ICON_SPACING",
+    rowSpacing = "DUNGEON_COOLDOWNS_ROW_SPACING",
+    frameGap = "DUNGEON_COOLDOWNS_FRAME_GAP",
+    offsetX = "DUNGEON_COOLDOWNS_OFFSET_X",
+    offsetY = "DUNGEON_COOLDOWNS_OFFSET_Y",
+    alignment = "DUNGEON_COOLDOWNS_ALIGNMENT",
+    iconAlpha = "DUNGEON_COOLDOWNS_ICON_ALPHA",
+    borderStyle = "DUNGEON_COOLDOWNS_BORDER_STYLE",
+    borderSize = "DUNGEON_COOLDOWNS_BORDER_SIZE",
     maxPerCategory = "DUNGEON_COOLDOWNS_MAX_PER_CATEGORY",
 }
 
@@ -48,6 +57,29 @@ local function GetSideOptions()
     return container:GetData()
 end
 
+local function GetAlignmentOptions()
+    local container = Settings.CreateControlTextContainer()
+    container:Add("TOP", "Haut")
+    container:Add("CENTER", "Centre")
+    container:Add("BOTTOM", "Bas")
+    return container:GetData()
+end
+
+local function GetBorderOptions()
+    local container = Settings.CreateControlTextContainer()
+    container:Add("CATEGORY", "Couleur de la catégorie")
+    container:Add("DARK", "Bordure sombre")
+    container:Add("NONE", "Aucune bordure")
+    return container:GetData()
+end
+
+local function AddSlider(options, key, label, minimum, maximum, step, description, formatter)
+    local setting = options:RegisterSetting(key, Settings.VarType.Number, label)
+    local sliderOptions = Settings.CreateSliderOptions(minimum, maximum, step)
+    sliderOptions:SetLabelFormatter(MinimalSliderWithSteppersMixin.Label.Right, formatter or tostring)
+    Settings.CreateSlider(options.category, setting, sliderOptions, description)
+end
+
 function Options:RegisterCategory()
     if not Settings or not Settings.RegisterVerticalLayoutCategory then
         ns.Print("l’API des options Blizzard n’est pas disponible.")
@@ -81,12 +113,26 @@ function Options:RegisterCategory()
     local side = self:RegisterSetting("side", Settings.VarType.String, "Position à côté des cadres")
     Settings.CreateDropdown(category, side, GetSideOptions, "Place les icônes à gauche ou à droite des cadres de groupe Blizzard.")
 
+    local alignment = self:RegisterSetting("alignment", Settings.VarType.String, "Alignement vertical")
+    Settings.CreateDropdown(category, alignment, GetAlignmentOptions, "Aligne le bloc d’icônes en haut, au centre ou en bas de la raid frame.")
+
     local iconSize = self:RegisterSetting("iconSize", Settings.VarType.Number, "Taille des icônes")
     local iconSizeOptions = Settings.CreateSliderOptions(14, 36, 1)
     iconSizeOptions:SetLabelFormatter(MinimalSliderWithSteppersMixin.Label.Right, function(value)
         return string.format("%d px", value)
     end)
     Settings.CreateSlider(category, iconSize, iconSizeOptions, "Définit la largeur et la hauteur de chaque icône.")
+
+    AddSlider(self, "spacing", "Espacement horizontal", 0, 10, 1, "Espace entre deux icônes d’une même ligne.", function(value) return string.format("%d px", value) end)
+    AddSlider(self, "rowSpacing", "Espacement des lignes", 0, 12, 1, "Espace entre la ligne défensive et la ligne offensive.", function(value) return string.format("%d px", value) end)
+    AddSlider(self, "frameGap", "Distance de la raid frame", 0, 30, 1, "Distance entre le bloc de cooldowns et le bord de la raid frame.", function(value) return string.format("%d px", value) end)
+    AddSlider(self, "offsetX", "Décalage horizontal", -100, 100, 1, "Déplace finement le bloc sur l’axe horizontal.", function(value) return string.format("%+d px", value) end)
+    AddSlider(self, "offsetY", "Décalage vertical", -100, 100, 1, "Déplace finement le bloc sur l’axe vertical.", function(value) return string.format("%+d px", value) end)
+    AddSlider(self, "iconAlpha", "Opacité des icônes", 0.30, 1, 0.05, "Règle l’opacité globale des cooldowns.", function(value) return string.format("%d %%", math.floor(value * 100 + 0.5)) end)
+
+    local borderStyle = self:RegisterSetting("borderStyle", Settings.VarType.String, "Style de bordure")
+    Settings.CreateDropdown(category, borderStyle, GetBorderOptions, "Utilise la couleur offensif/défensif, une bordure sombre ou aucune bordure.")
+    AddSlider(self, "borderSize", "Épaisseur de bordure", 1, 4, 1, "Épaisseur du contour des icônes.", function(value) return string.format("%d px", value) end)
 
     local maxIcons = self:RegisterSetting("maxPerCategory", Settings.VarType.Number, "Icônes maximum par catégorie")
     local maxIconsOptions = Settings.CreateSliderOptions(1, 8, 1)

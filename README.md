@@ -12,9 +12,9 @@ Addon WoW Retail 12.1 affichant les principaux temps de recharge défensifs et o
 - Détection automatique des talents et remplacements de sorts du joueur local.
 - Synchronisation légère entre membres possédant l’addon : liste des sorts connus et notification d’utilisation.
 - Inspection de la spécialisation comme solution de secours pour déterminer les sorts potentiels.
-- Configuration native dans **Options > AddOns > Dungeon Cooldowns** : position, taille, nombre d’icônes et affichage des CDs disponibles.
+- Configuration native dans **Options > AddOns > Dungeon Cooldowns** : côté, alignement, décalages, distance à la frame, taille, espacements, opacité, bordure, nombre d’icônes et affichage des CDs disponibles.
 - Sélection précise des cooldowns à afficher, organisée par classe et spécialisation, avec choix individuel et actions « tout sélectionner / tout masquer ».
-- Aperçu réaliste directement sur les cadres de groupe visibles ; un cadre autonome est utilisé uniquement hors groupe.
+- Aperçu réaliste directement sur les cadres `CompactPartyFrame` ou `CompactRaidFrame` visibles ; une raid frame de secours est utilisée uniquement lorsqu’aucun cadre Blizzard n’est disponible.
 - Aucun framework ni bibliothèque externe.
 
 ## Installation

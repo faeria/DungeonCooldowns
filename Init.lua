@@ -1,7 +1,7 @@
 local addonName, ns = ...
 
 ns.addonName = addonName
-ns.version = "1.1.0"
+ns.version = "1.2.0"
 ns.protocol = 1
 ns.prefix = "DCD5"
 
@@ -22,6 +22,14 @@ ns.defaults = {
     side = "RIGHT",
     iconSize = 20,
     spacing = 2,
+    rowSpacing = 2,
+    frameGap = 4,
+    offsetX = 0,
+    offsetY = 0,
+    alignment = "CENTER",
+    iconAlpha = 1,
+    borderStyle = "CATEGORY",
+    borderSize = 1,
     maxPerCategory = 5,
     disabledSpells = {},
 }

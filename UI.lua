@@ -129,38 +129,76 @@ function UI:CreateTestPreview()
     end
 
     local frame = CreateFrame("Frame", "DungeonCooldownsTestPreview", UIParent, "BackdropTemplate")
-    frame:SetSize(150, 42)
-    frame:SetPoint("CENTER", UIParent, "CENTER", -160, 0)
+    frame:SetSize(180, 52)
+    frame:SetPoint("CENTER", UIParent, "CENTER", -180, 0)
     frame:SetFrameStrata("DIALOG")
     frame:SetBackdrop(BACKDROP)
-    frame:SetBackdropColor(0.08, 0.10, 0.12, 0.96)
-    frame:SetBackdropBorderColor(0.28, 0.32, 0.36, 1)
+    frame:SetBackdropColor(0.02, 0.02, 0.025, 0.98)
+    frame:SetBackdropBorderColor(0.08, 0.08, 0.10, 1)
     frame.isDungeonCooldownsTest = true
 
     local health = frame:CreateTexture(nil, "BACKGROUND")
-    health:SetPoint("TOPLEFT", 3, -3)
-    health:SetPoint("BOTTOMRIGHT", -3, 3)
-    health:SetColorTexture(0.15, 0.55, 0.22, 0.85)
+    health:SetPoint("TOPLEFT", 2, -2)
+    health:SetPoint("BOTTOMRIGHT", -2, 7)
+    health:SetColorTexture(0.25, 0.58, 0.82, 0.90)
+
+    local healthShade = frame:CreateTexture(nil, "BORDER")
+    healthShade:SetPoint("TOPLEFT", health, "TOPLEFT")
+    healthShade:SetPoint("BOTTOMRIGHT", health, "BOTTOMRIGHT")
+    healthShade:SetColorTexture(0, 0, 0, 0.18)
+
+    local resource = frame:CreateTexture(nil, "ARTWORK")
+    resource:SetPoint("BOTTOMLEFT", 2, 2)
+    resource:SetPoint("BOTTOMRIGHT", -2, 2)
+    resource:SetHeight(4)
+    resource:SetColorTexture(0.10, 0.35, 0.95, 1)
 
     local name = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-    name:SetPoint("LEFT", 9, 0)
-    name:SetText("Joueur test")
+    name:SetPoint("TOP", 0, -8)
+    name:SetText("Aperçu raid frame")
+
+    local healthValue = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+    healthValue:SetPoint("BOTTOM", 0, 10)
+    healthValue:SetText("463K")
 
     frame:Hide()
     self.testFrame = frame
     self:CreateOverlay(frame)
 end
 
+function UI:GetUnitFrames()
+    local frames = {}
+    local seen = {}
+    if CompactPartyFrame and CompactPartyFrame.memberUnitFrames then
+        for _, frame in ipairs(CompactPartyFrame.memberUnitFrames) do
+            if frame and not seen[frame] then
+                seen[frame] = true
+                frames[#frames + 1] = frame
+            end
+        end
+    end
+    for index = 1, 5 do
+        local frame = _G["CompactRaidFrame" .. index]
+        if frame and not seen[frame] then
+            seen[frame] = true
+            frames[#frames + 1] = frame
+        end
+    end
+    return frames
+end
+
 function UI:EnsureFrames()
     -- Never call CompactPartyFrame_Generate here. It creates protected
     -- Blizzard unit frames and is reserved for Blizzard's own UI code.
-    if not CompactPartyFrame or not CompactPartyFrame.memberUnitFrames then
+    local unitFrames = self:GetUnitFrames()
+    if #unitFrames == 0 then
         self.pendingFrames = true
         return false
     end
 
     local foundAllFrames = true
-    for _, unitFrame in ipairs(CompactPartyFrame.memberUnitFrames) do
+    self.frameOrder = unitFrames
+    for _, unitFrame in ipairs(unitFrames) do
         if not self.overlays[unitFrame] then
             if InCombatLockdown() then
                 foundAllFrames = false
@@ -188,19 +226,32 @@ function UI:ApplyLayout()
     local spacing = ns.db.spacing
     local width = (size * ns.db.maxPerCategory) + (spacing * math.max(0, ns.db.maxPerCategory - 1))
     local visibleRows = (ns.db.showDefensive and 1 or 0) + (ns.db.showOffensive and 1 or 0)
-    local height = math.max(size, (size * visibleRows) + (spacing * math.max(0, visibleRows - 1)))
+    local height = math.max(size, (size * visibleRows) + (ns.db.rowSpacing * math.max(0, visibleRows - 1)))
 
     for unitFrame, overlay in pairs(self.overlays) do
         overlay:ClearAllPoints()
         overlay:SetSize(width, height)
+        local alignment = ns.db.alignment or "CENTER"
+        local overlayPoint
+        local framePoint
         if ns.db.side == "LEFT" then
-            overlay:SetPoint("RIGHT", unitFrame, "LEFT", -4, 0)
+            overlayPoint = alignment == "TOP" and "TOPRIGHT" or (alignment == "BOTTOM" and "BOTTOMRIGHT" or "RIGHT")
+            framePoint = alignment == "TOP" and "TOPLEFT" or (alignment == "BOTTOM" and "BOTTOMLEFT" or "LEFT")
+            overlay:SetPoint(overlayPoint, unitFrame, framePoint, -(ns.db.frameGap or 4) + (ns.db.offsetX or 0), ns.db.offsetY or 0)
         else
-            overlay:SetPoint("LEFT", unitFrame, "RIGHT", 4, 0)
+            overlayPoint = alignment == "TOP" and "TOPLEFT" or (alignment == "BOTTOM" and "BOTTOMLEFT" or "LEFT")
+            framePoint = alignment == "TOP" and "TOPRIGHT" or (alignment == "BOTTOM" and "BOTTOMRIGHT" or "RIGHT")
+            overlay:SetPoint(overlayPoint, unitFrame, framePoint, (ns.db.frameGap or 4) + (ns.db.offsetX or 0), ns.db.offsetY or 0)
         end
 
         for _, icon in ipairs(overlay.icons) do
             icon:SetSize(size, size)
+            local edgeSize = ns.db.borderStyle == "NONE" and 0 or (ns.db.borderSize or 1)
+            icon:SetBackdrop({
+                bgFile = "Interface\\Buttons\\WHITE8X8",
+                edgeFile = edgeSize > 0 and "Interface\\Buttons\\WHITE8X8" or nil,
+                edgeSize = edgeSize,
+            })
         end
     end
 
@@ -295,8 +346,8 @@ local TEST_PROFILES = {
 
 function UI:GetTestEntries(unitFrame)
     local profileIndex = 1
-    if CompactPartyFrame and CompactPartyFrame.memberUnitFrames then
-        for index, frame in ipairs(CompactPartyFrame.memberUnitFrames) do
+    if self.frameOrder then
+        for index, frame in ipairs(self.frameOrder) do
             if frame == unitFrame then
                 profileIndex = index
                 break
@@ -327,6 +378,12 @@ function UI:AcquireIcon(overlay, index)
         overlay.icons[index] = icon
     end
     icon:SetSize(ns.db.iconSize, ns.db.iconSize)
+    local edgeSize = ns.db.borderStyle == "NONE" and 0 or (ns.db.borderSize or 1)
+    icon:SetBackdrop({
+        bgFile = "Interface\\Buttons\\WHITE8X8",
+        edgeFile = edgeSize > 0 and "Interface\\Buttons\\WHITE8X8" or nil,
+        edgeSize = edgeSize,
+    })
     return icon
 end
 
@@ -339,7 +396,7 @@ function UI:PositionIcon(icon, entry)
         row = 1
     end
     local x = (entry.categoryIndex - 1) * (size + spacing)
-    local y = row * (size + spacing)
+    local y = row * (size + (ns.db.rowSpacing or spacing))
 
     icon:ClearAllPoints()
     if ns.db.side == "LEFT" then
@@ -396,8 +453,15 @@ function UI:AssignIcon(icon, entry, state, isLocal)
     icon.texture:SetTexture(GetSpellTexture(entry.spellID))
 
     local color = ns.colors[entry.data.category]
-    icon:SetBackdropBorderColor(color[1], color[2], color[3], 1)
-    icon:SetAlpha((isLocal or icon.source == "synced") and 1 or 0.82)
+    if ns.db.borderStyle == "DARK" then
+        icon:SetBackdropBorderColor(0.04, 0.04, 0.05, 1)
+    elseif ns.db.borderStyle == "NONE" then
+        icon:SetBackdropBorderColor(0, 0, 0, 0)
+    else
+        icon:SetBackdropBorderColor(color[1], color[2], color[3], 1)
+    end
+    local sourceAlpha = (isLocal or icon.source == "synced") and 1 or 0.82
+    icon:SetAlpha(sourceAlpha * (ns.db.iconAlpha or 1))
 
     if isLocal then
         self:RefreshLocalIcon(icon)
@@ -461,8 +525,8 @@ function UI:RefreshAll()
     end
     if self.testFrame then
         local hasVisiblePartyFrame = false
-        if ns.Core and ns.Core.testMode and CompactPartyFrame and CompactPartyFrame.memberUnitFrames then
-            for _, frame in ipairs(CompactPartyFrame.memberUnitFrames) do
+        if ns.Core and ns.Core.testMode then
+            for _, frame in ipairs(self:GetUnitFrames()) do
                 if frame:IsVisible() then
                     hasVisiblePartyFrame = true
                     break

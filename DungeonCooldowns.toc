@@ -3,7 +3,7 @@
 ## Notes: Offensive and defensive cooldowns beside Blizzard raid-style party frames in 5-player dungeons.
 ## Notes-frFR: Temps de recharge offensifs et defensifs a cote des cadres de groupe Blizzard dans les donjons a 5 joueurs.
 ## Author: Eric
-## Version: 1.1.0
+## Version: 1.2.0
 ## SavedVariables: DungeonCooldownsDB
 ## OptionalDeps: Blizzard_CompactRaidFrames, Blizzard_UnitFrame
 ## X-Source-Client: 12.1.0.69497

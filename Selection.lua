@@ -56,9 +56,24 @@ local function GetClassSpellRows(classID)
 end
 
 local function CreateButton(parent, text, width, height)
-    local button = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
+    local button = CreateFrame("Button", nil, parent, "BackdropTemplate")
     button:SetSize(width, height or 24)
-    button:SetText(text)
+    button:SetBackdrop({
+        bgFile = "Interface\\Buttons\\WHITE8X8",
+        edgeFile = "Interface\\Buttons\\WHITE8X8",
+        edgeSize = 1,
+    })
+    button:SetBackdropColor(0.10, 0.11, 0.14, 0.96)
+    button:SetBackdropBorderColor(0.26, 0.29, 0.35, 1)
+    button.label = button:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    button.label:SetPoint("CENTER")
+    button.label:SetText(text)
+    button:SetScript("OnEnter", function(self)
+        if self:IsEnabled() then self:SetBackdropColor(0.18, 0.21, 0.27, 1) end
+    end)
+    button:SetScript("OnLeave", function(self)
+        if self:IsEnabled() then self:SetBackdropColor(0.10, 0.11, 0.14, 0.96) end
+    end)
     return button
 end
 
@@ -77,22 +92,38 @@ function Selector:SetClassEnabled(enabled)
 end
 
 function Selector:CreateRow(parent, index)
-    local row = CreateFrame("CheckButton", nil, parent, "UICheckButtonTemplate")
-    row:SetSize(430, 28)
-    row:SetPoint("TOPLEFT", 4, -((index - 1) * 30))
+    local row = CreateFrame("Button", nil, parent, "BackdropTemplate")
+    row:SetSize(610, 32)
+    row:SetPoint("TOPLEFT", 2, -((index - 1) * 34))
+    row:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8" })
+    row:SetBackdropColor(0.055, 0.06, 0.075, index % 2 == 0 and 0.88 or 0.58)
+
+    row.check = CreateFrame("CheckButton", nil, row, "UICheckButtonTemplate")
+    row.check:SetSize(24, 24)
+    row.check:SetPoint("LEFT", 5, 0)
 
     row.icon = row:CreateTexture(nil, "ARTWORK")
-    row.icon:SetSize(22, 22)
-    row.icon:SetPoint("LEFT", row, "LEFT", 30, 0)
+    row.icon:SetSize(26, 26)
+    row.icon:SetPoint("LEFT", row.check, "RIGHT", 5, 0)
     row.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
 
     row.label = row:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     row.label:SetPoint("LEFT", row.icon, "RIGHT", 8, 0)
     row.label:SetJustifyH("LEFT")
 
-    row:SetScript("OnClick", function(check)
-        ns.SetSpellEnabled(check.spellID, check:GetChecked())
+    local function Toggle(check)
+        if not row.spellID then return end
+        if check ~= row.check then row.check:SetChecked(not row.check:GetChecked()) end
+        ns.SetSpellEnabled(row.spellID, row.check:GetChecked())
         Selector:RefreshCooldowns()
+    end
+    row.check:SetScript("OnClick", Toggle)
+    row:SetScript("OnClick", Toggle)
+    row:SetScript("OnEnter", function(self)
+        if self.spellID then self:SetBackdropColor(0.14, 0.16, 0.20, 0.95) end
+    end)
+    row:SetScript("OnLeave", function(self)
+        self:SetBackdropColor(0.055, 0.06, 0.075, index % 2 == 0 and 0.88 or 0.58)
     end)
     self.rows[index] = row
     return row
@@ -106,30 +137,30 @@ function Selector:RefreshRows()
         index = index + 1
         local header = self.rows[index] or self:CreateRow(self.scrollChild, index)
         header:Disable()
-        if header:GetNormalTexture() then header:GetNormalTexture():SetAlpha(0) end
-        if header:GetDisabledCheckedTexture() then header:GetDisabledCheckedTexture():SetAlpha(0) end
+        header.check:Hide()
         header.icon:Hide()
         header.label:ClearAllPoints()
         header.label:SetPoint("LEFT", header, "LEFT", 6, 0)
         header.label:SetFontObject(GameFontNormalLarge)
         header.label:SetText(GetSpecLabel(section.specID))
         header.spellID = nil
-        header:SetChecked(false)
+        header:SetBackdropColor(0.08, 0.20, 0.30, 0.92)
         header:Show()
 
         for _, spellID in ipairs(section.spells) do
             index = index + 1
             local row = self.rows[index] or self:CreateRow(self.scrollChild, index)
             row:Enable()
-            if row:GetNormalTexture() then row:GetNormalTexture():SetAlpha(1) end
+            row.check:Show()
             row.icon:Show()
+            row:SetBackdropColor(0.055, 0.06, 0.075, index % 2 == 0 and 0.88 or 0.58)
             row.label:ClearAllPoints()
             row.label:SetPoint("LEFT", row.icon, "RIGHT", 8, 0)
             row.label:SetFontObject(GameFontHighlight)
             row.spellID = spellID
             row.label:SetText(GetSpellName(spellID))
             row.icon:SetTexture(C_Spell.GetSpellTexture(spellID) or 134400)
-            row:SetChecked(ns.IsSpellEnabled(spellID))
+            row.check:SetChecked(ns.IsSpellEnabled(spellID))
             row:Show()
         end
     end
@@ -137,7 +168,7 @@ function Selector:RefreshRows()
     for rowIndex = index + 1, #self.rows do
         self.rows[rowIndex]:Hide()
     end
-    self.scrollChild:SetHeight(math.max(1, index * 30))
+    self.scrollChild:SetHeight(math.max(1, index * 34))
     self.title:SetText("Cooldowns — " .. GetClassLabel(self.selectedClassID))
 end
 
@@ -145,6 +176,13 @@ function Selector:SelectClass(classID)
     self.selectedClassID = classID
     for id, button in pairs(self.classButtons) do
         button:SetEnabled(id ~= classID)
+        if id == classID then
+            button:SetBackdropColor(0.08, 0.45, 0.70, 1)
+            button:SetBackdropBorderColor(0.25, 0.78, 1, 1)
+        else
+            button:SetBackdropColor(0.10, 0.11, 0.14, 0.96)
+            button:SetBackdropBorderColor(0.26, 0.29, 0.35, 1)
+        end
     end
     self:RefreshRows()
 end
@@ -153,7 +191,7 @@ function Selector:Create()
     if self.frame then return end
 
     local frame = CreateFrame("Frame", "DungeonCooldownsSpellSelector", UIParent, "BackdropTemplate")
-    frame:SetSize(620, 620)
+    frame:SetSize(700, 650)
     frame:SetPoint("CENTER")
     frame:SetFrameStrata("DIALOG")
     frame:SetClampedToScreen(true)
@@ -163,14 +201,15 @@ function Selector:Create()
     frame:SetScript("OnDragStart", frame.StartMoving)
     frame:SetScript("OnDragStop", frame.StopMovingOrSizing)
     frame:SetBackdrop({
-        bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
-        edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
-        tile = true, tileSize = 32, edgeSize = 32,
-        insets = { left = 11, right = 12, top = 12, bottom = 11 },
+        bgFile = "Interface\\Buttons\\WHITE8X8",
+        edgeFile = "Interface\\Buttons\\WHITE8X8",
+        edgeSize = 2,
     })
+    frame:SetBackdropColor(0.025, 0.028, 0.038, 0.98)
+    frame:SetBackdropBorderColor(0.12, 0.55, 0.82, 1)
 
     local title = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-    title:SetPoint("TOP", 0, -18)
+    title:SetPoint("TOPLEFT", 24, -20)
     self.title = title
 
     local close = CreateFrame("Button", nil, frame, "UIPanelCloseButton")
@@ -178,23 +217,24 @@ function Selector:Create()
 
     local hint = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     hint:SetPoint("TOPLEFT", 24, -48)
+    hint:SetTextColor(0.68, 0.72, 0.78)
     hint:SetText("Les sorts décochés sont masqués pour tous les membres du groupe.")
 
     self.classButtons = {}
     for classID = 1, 13 do
-        local button = CreateButton(frame, GetClassLabel(classID), 88, 22)
-        local column = (classID - 1) % 6
-        local line = math.floor((classID - 1) / 6)
-        button:SetPoint("TOPLEFT", 24 + column * 94, -70 - line * 26)
+        local button = CreateButton(frame, GetClassLabel(classID), 89, 25)
+        local column = (classID - 1) % 7
+        local line = math.floor((classID - 1) / 7)
+        button:SetPoint("TOPLEFT", 24 + column * 93, -72 - line * 29)
         button:SetScript("OnClick", function() Selector:SelectClass(classID) end)
         self.classButtons[classID] = button
     end
 
     local scroll = CreateFrame("ScrollFrame", nil, frame, "UIPanelScrollFrameTemplate")
-    scroll:SetPoint("TOPLEFT", 24, -156)
+    scroll:SetPoint("TOPLEFT", 24, -142)
     scroll:SetPoint("BOTTOMRIGHT", -46, 56)
     local child = CreateFrame("Frame", nil, scroll)
-    child:SetWidth(530)
+    child:SetWidth(620)
     child:SetHeight(1)
     scroll:SetScrollChild(child)
     self.scrollChild = child
