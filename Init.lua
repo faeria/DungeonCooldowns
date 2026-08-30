@@ -1,7 +1,7 @@
 local addonName, ns = ...
 
 ns.addonName = addonName
-ns.version = "1.0.2"
+ns.version = "1.1.0"
 ns.protocol = 1
 ns.prefix = "DCD5"
 
@@ -23,7 +23,23 @@ ns.defaults = {
     iconSize = 20,
     spacing = 2,
     maxPerCategory = 5,
+    disabledSpells = {},
 }
+
+function ns.IsSpellEnabled(spellID)
+    if not ns.db or not ns.db.disabledSpells then
+        return true
+    end
+    local _, canonicalID = ns.GetSpellData(spellID)
+    return ns.db.disabledSpells[tostring(canonicalID or spellID)] ~= true
+end
+
+function ns.SetSpellEnabled(spellID, enabled)
+    ns.db.disabledSpells = ns.db.disabledSpells or {}
+    local _, canonicalID = ns.GetSpellData(spellID)
+    local key = tostring(canonicalID or spellID)
+    ns.db.disabledSpells[key] = enabled and nil or true
+end
 
 function ns.Print(message)
     DEFAULT_CHAT_FRAME:AddMessage("|cff35cfffDungeon Cooldowns|r : " .. tostring(message))

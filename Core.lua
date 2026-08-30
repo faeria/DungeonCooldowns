@@ -17,7 +17,14 @@ Core.eventFrame = eventFrame
 local function CopyDefaults(target, defaults)
     for key, value in pairs(defaults) do
         if target[key] == nil then
-            target[key] = value
+            if type(value) == "table" then
+                target[key] = {}
+                for childKey, childValue in pairs(value) do
+                    target[key][childKey] = childValue
+                end
+            else
+                target[key] = value
+            end
         end
     end
 end
@@ -458,7 +465,7 @@ function Core:StartTest()
     self.testStarted = GetTime()
     ns.UI:EnsureFrames()
     ns.UI:RefreshAll()
-    ns.Print("mode test actif pendant 20 secondes.")
+    ns.Print("aperçu actif pendant 20 secondes sur vos cadres de groupe.")
 
     local started = self.testStarted
     C_Timer.After(20, function()

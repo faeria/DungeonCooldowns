@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.0
+
+- Ajout d’un sélecteur de cooldowns par classe et spécialisation.
+- Possibilité d’afficher ou masquer chaque sort individuellement.
+- Ajout des actions de sélection globale pour chaque classe.
+- Aperçu réparti sur les party frames réellement visibles, avec plusieurs profils et états de recharge.
+- Conservation d’un cadre d’aperçu autonome uniquement lorsqu’aucune party frame n’est disponible.
+
 ## 1.0.2
 
 - Suppression de l’inscription interdite à `COMBAT_LOG_EVENT_UNFILTERED`, événement protégé en Retail 12.1.

@@ -96,6 +96,18 @@ function Options:RegisterCategory()
     Settings.CreateSlider(category, maxIcons, maxIconsOptions, "Limite séparément les défensifs et les offensifs affichés pour chaque joueur.")
 
     if CreateSettingsListSectionHeaderInitializer and CreateSettingsButtonInitializer then
+        layout:AddInitializer(CreateSettingsListSectionHeaderInitializer("Personnalisation"))
+        local spellButton = CreateSettingsButtonInitializer(
+            "Cooldowns affichés",
+            "Choisir les sorts",
+            function()
+                ns.CooldownSelector:Open()
+            end,
+            "Choisissez précisément les cooldowns offensifs et défensifs à afficher, classe par classe.",
+            true
+        )
+        layout:AddInitializer(spellButton)
+
         layout:AddInitializer(CreateSettingsListSectionHeaderInitializer("Diagnostic"))
 
         local testButton = CreateSettingsButtonInitializer(
@@ -104,7 +116,7 @@ function Options:RegisterCategory()
             function()
                 ns.Core:StartTest()
             end,
-            "Affiche un cadre de démonstration pendant vingt secondes.",
+            "Affiche pendant vingt secondes un exemple directement sur vos cadres de groupe visibles.",
             true
         )
         layout:AddInitializer(testButton)
@@ -142,7 +154,14 @@ function Options:Reset()
         if setting then
             setting:SetValue(value)
         else
-            ns.db[key] = value
+            if type(value) == "table" then
+                ns.db[key] = {}
+                for childKey, childValue in pairs(value) do
+                    ns.db[key][childKey] = childValue
+                end
+            else
+                ns.db[key] = value
+            end
         end
     end
     ns.UI:ApplyLayout()

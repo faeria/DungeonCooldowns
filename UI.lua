@@ -214,6 +214,9 @@ local function IsLocalSpellOnCooldown(spellID)
 end
 
 function UI:ShouldIncludeSpell(spellID, data, isLocal, timer)
+    if not ns.IsSpellEnabled(spellID) then
+        return false
+    end
     if data.category == ns.CATEGORY_OFFENSIVE and not ns.db.showOffensive then
         return false
     end
@@ -282,8 +285,25 @@ function UI:GetEntries(state, isLocal)
     return selected
 end
 
-function UI:GetTestEntries()
-    local testSpells = { 642, 6940, 633, 31884, 231895, 1022, 184662 }
+local TEST_PROFILES = {
+    { 642, 6940, 633, 31884, 1022, 184662 },
+    { 55233, 48792, 48707, 49028, 51052 },
+    { 190319, 45438, 342245, 110959, 235313 },
+    { 10060, 62618, 19236, 33206, 47536 },
+    { 107574, 97462, 118038, 871, 23920 },
+}
+
+function UI:GetTestEntries(unitFrame)
+    local profileIndex = 1
+    if CompactPartyFrame and CompactPartyFrame.memberUnitFrames then
+        for index, frame in ipairs(CompactPartyFrame.memberUnitFrames) do
+            if frame == unitFrame then
+                profileIndex = index
+                break
+            end
+        end
+    end
+    local testSpells = TEST_PROFILES[profileIndex] or TEST_PROFILES[1]
     local state = {
         known = testSpells,
         timers = {},
@@ -291,9 +311,12 @@ function UI:GetTestEntries()
     }
     local now = GetTime()
     local started = ns.Core.testStarted or now
-    state.timers[642] = { start = started - 18, duration = 300, expires = started + 282 }
-    state.timers[6940] = { start = started - 32, duration = 120, expires = started + 88 }
-    state.timers[31884] = { start = started - 22, duration = 120, expires = started + 98 }
+    local first = testSpells[1]
+    local second = testSpells[2]
+    local fourth = testSpells[4]
+    if first then state.timers[first] = { start = started - 18, duration = 120, expires = started + 102 } end
+    if second then state.timers[second] = { start = started - 32, duration = 90, expires = started + 58 } end
+    if fourth then state.timers[fourth] = { start = started - 22, duration = 120, expires = started + 98 } end
     return self:GetEntries(state, false), state
 end
 
@@ -405,7 +428,7 @@ function UI:RefreshOverlay(unitFrame, overlay)
     local state
     local entries
     if ns.Core.testMode then
-        entries, state = self:GetTestEntries()
+        entries, state = self:GetTestEntries(unitFrame)
         isLocal = false
     else
         local guid = UnitGUID(unit)
@@ -437,7 +460,16 @@ function UI:RefreshAll()
         return
     end
     if self.testFrame then
-        self.testFrame:SetShown(ns.Core and ns.Core.testMode or false)
+        local hasVisiblePartyFrame = false
+        if ns.Core and ns.Core.testMode and CompactPartyFrame and CompactPartyFrame.memberUnitFrames then
+            for _, frame in ipairs(CompactPartyFrame.memberUnitFrames) do
+                if frame:IsVisible() then
+                    hasVisiblePartyFrame = true
+                    break
+                end
+            end
+        end
+        self.testFrame:SetShown(ns.Core and ns.Core.testMode and not hasVisiblePartyFrame or false)
     end
     for unitFrame, overlay in pairs(self.overlays) do
         self:RefreshOverlay(unitFrame, overlay)
