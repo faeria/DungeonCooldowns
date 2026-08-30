@@ -115,7 +115,7 @@ function Options:RegisterCategory()
             function()
                 ns.Core:PrintStatus()
             end,
-            "Affiche le contexte actif et l’état des restrictions du journal de combat.",
+            "Affiche le contexte actif et le mode de suivi distant utilisé.",
             true
         )
         layout:AddInitializer(statusButton)

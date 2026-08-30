@@ -408,21 +408,6 @@ function Core:HandleInspectReady(guid)
     end)
 end
 
-function Core:IsCombatLogRestricted()
-    return C_CombatLog and C_CombatLog.IsCombatLogRestricted and C_CombatLog.IsCombatLogRestricted()
-end
-
-function Core:HandleCombatLog()
-    if not self.active or self:IsCombatLogRestricted() or not CombatLogGetCurrentEventInfo then
-        return
-    end
-
-    local _, subevent, _, sourceGUID, _, _, _, _, _, _, _, spellID = CombatLogGetCurrentEventInfo()
-    if subevent == "SPELL_CAST_SUCCESS" and sourceGUID ~= UnitGUID("player") and self.rosterGUIDs[sourceGUID] then
-        self:RecordUsage(sourceGUID, spellID, "observed")
-    end
-end
-
 function Core:HandlePlayerSpellcast(unit, spellID)
     if not self.active or unit ~= "player" then
         return
@@ -492,8 +477,7 @@ end
 
 function Core:PrintStatus()
     local mode = self.active and "actif en donjon" or "inactif hors donjon à 5"
-    local restriction = self:IsCombatLogRestricted() and "journal de combat restreint" or "journal de combat disponible"
-    ns.Print(mode .. " — " .. restriction .. ".")
+    ns.Print(mode .. " — suivi distant par synchronisation entre utilisateurs de l’addon.")
 end
 
 function Core:RegisterRuntimeEvents()
@@ -504,7 +488,6 @@ function Core:RegisterRuntimeEvents()
     eventFrame:RegisterEvent("CHALLENGE_MODE_START")
     eventFrame:RegisterEvent("CHALLENGE_MODE_RESET")
     eventFrame:RegisterEvent("CHAT_MSG_ADDON")
-    eventFrame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
     eventFrame:RegisterEvent("INSPECT_READY")
     eventFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
     eventFrame:RegisterEvent("SPELL_UPDATE_COOLDOWN")
@@ -545,8 +528,6 @@ function Core:OnEvent(event, ...)
         if self.active and prefix == ns.prefix then
             self:HandleAddonMessage(message, sender)
         end
-    elseif event == "COMBAT_LOG_EVENT_UNFILTERED" then
-        self:HandleCombatLog()
     elseif event == "UNIT_SPELLCAST_SUCCEEDED" then
         local unit, _, spellID = ...
         self:HandlePlayerSpellcast(unit, spellID)

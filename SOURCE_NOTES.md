@@ -33,7 +33,7 @@ La documentation 12.1 déclare :
 
 Le diffuseur Blizzard utilise `C_Commentator.SendAddonMessage`, API réservée aux royaumes de tournoi et aux commentateurs. Dungeon Cooldowns n’essaie pas de l’appeler. Il transmet uniquement des données non protégées concernant le joueur local avec `C_ChatInfo.SendAddonMessage` : sorts connus et identifiant d’un sort que le joueur vient lui-même d’utiliser.
 
-Quand le journal de combat public est disponible, `COMBAT_LOG_EVENT_UNFILTERED` complète cette synchronisation. Quand il est restreint, l’addon ne lit pas l’événement.
+`COMBAT_LOG_EVENT_UNFILTERED` est déclaré avec `HasRestrictions = true` dans `CombatLogDocumentation.lua`. Son inscription avec `Frame:RegisterEvent` est interdite aux addons tiers en Retail 12.1 ; Dungeon Cooldowns ne tente donc jamais de l’enregistrer. Les utilisations distantes sont suivies uniquement lorsque l’autre joueur utilise aussi l’addon.
 
 ## Base de sorts
 

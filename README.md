@@ -11,7 +11,7 @@ Addon WoW Retail 12.1 affichant les principaux temps de recharge défensifs et o
 - État exact du joueur local via `C_Spell.GetSpellCooldown` et `C_Spell.GetSpellCharges`.
 - Détection automatique des talents et remplacements de sorts du joueur local.
 - Synchronisation légère entre membres possédant l’addon : liste des sorts connus et notification d’utilisation.
-- Inspection de la spécialisation et journal de combat comme solutions de secours.
+- Inspection de la spécialisation comme solution de secours pour déterminer les sorts potentiels.
 - Configuration native dans **Options > AddOns > Dungeon Cooldowns** : position, taille, nombre d’icônes et affichage des CDs disponibles.
 - Aucun framework ni bibliothèque externe.
 
@@ -31,13 +31,13 @@ Addon WoW Retail 12.1 affichant les principaux temps de recharge défensifs et o
 2. Utiliser l’adresse du dépôt : `https://github.com/faeria/DungeonCooldowns`.
 3. WowUp récupère la dernière release GitHub et son archive `DungeonCooldowns-*.zip`.
 
-Chaque push sur `main` déclenche automatiquement une release GitHub. Son tag reprend la version du fichier TOC et ajoute le numéro d’exécution de la pipeline, par exemple `v1.0.1.1`.
+Chaque push sur `main` déclenche automatiquement une release GitHub. Son tag reprend la version du fichier TOC et ajoute le numéro d’exécution de la pipeline, par exemple `v1.0.2.2`.
 
 ## Commandes
 
 - `/dcd` : ouvrir **Options > AddOns > Dungeon Cooldowns**.
 - `/dcd test` : afficher un aperçu pendant 20 secondes.
-- `/dcd status` : afficher le contexte et les restrictions détectées.
+- `/dcd status` : afficher le contexte et le mode de suivi distant.
 - `/dcd reset` : réinitialiser la configuration.
 - `/dcd help` : afficher l’aide.
 
@@ -49,7 +49,7 @@ En conséquence :
 
 - le temps de recharge du joueur local est exact ;
 - pour un autre joueur utilisant l’addon, l’utilisation du sort est synchronisée automatiquement, mais la durée affichée reste une estimation fondée sur la durée de base ;
-- pour un joueur sans l’addon, la spécialisation peut être inspectée hors combat, mais une utilisation peut être indétectable lorsque Blizzard restreint le journal de combat ;
+- pour un joueur sans l’addon, la spécialisation peut être inspectée hors combat, mais ses utilisations ne peuvent pas être suivies via le journal de combat protégé ;
 - les réductions de recharge liées aux talents, procs et resets ne peuvent pas être garanties à distance.
 
 L’addon identifie ces valeurs comme **estimées** dans l’infobulle au lieu d’annoncer une précision techniquement impossible.
@@ -62,4 +62,4 @@ L’addon identifie ces valeurs comme **estimées** dans l’infobulle au lieu d
 - `Blizzard_CooldownBroadcaster/Blizzard_CooldownBroadcaster.lua` pour les modèles de cooldown et de charges.
 - `Blizzard_APIDocumentationGenerated` pour les signatures et restrictions des API 12.1.
 
-Source de référence : <https://github.com/Gethe/wow-ui-source>, branche `live`, version `12.1.0.69497` lors de la création de la version 1.0.1.
+Source de référence : <https://github.com/Gethe/wow-ui-source>, branche `live`, version `12.1.0.69497` lors de la création de la version 1.0.2.

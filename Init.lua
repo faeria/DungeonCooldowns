@@ -1,7 +1,7 @@
 local addonName, ns = ...
 
 ns.addonName = addonName
-ns.version = "1.0.1"
+ns.version = "1.0.2"
 ns.protocol = 1
 ns.prefix = "DCD5"
 

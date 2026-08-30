@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.2
+
+- Suppression de l’inscription interdite à `COMBAT_LOG_EVENT_UNFILTERED`, événement protégé en Retail 12.1.
+- Le suivi des utilisations distantes repose désormais explicitement sur la synchronisation entre joueurs possédant l’addon.
+- Correction du message d’état et de la documentation pour refléter cette restriction Blizzard.
+
 ## 1.0.1
 
 - Suppression de l’appel à `CompactPartyFrame_Generate`, réservé au code sécurisé de Blizzard.
