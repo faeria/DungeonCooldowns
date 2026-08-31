@@ -115,6 +115,7 @@ function Selector:CreateRow(parent, index)
         if not row.spellID then return end
         if check ~= row.check then row.check:SetChecked(not row.check:GetChecked()) end
         ns.SetSpellEnabled(row.spellID, row.check:GetChecked())
+        Selector:RefreshRows()
         Selector:RefreshCooldowns()
     end
     row.check:SetScript("OnClick", Toggle)

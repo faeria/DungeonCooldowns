@@ -59,12 +59,18 @@ function Core:IsDungeonContent()
     if not ns.db or not ns.db.enabled then
         return false
     end
-    local inInstance, instanceType = IsInInstance()
-    if not inInstance or instanceType ~= "party" or IsInRaid() then
+    if not IsInGroup() or IsInRaid() then
         return false
     end
     local members = GetNumGroupMembers()
-    return members >= 1 and members <= 5
+    if members < 1 or members > 5 then
+        return false
+    end
+    if ns.db.contentMode == "PARTY" then
+        return true
+    end
+    local inInstance, instanceType = IsInInstance()
+    return inInstance and instanceType == "party"
 end
 
 function Core:IsDisplayActive()
@@ -141,6 +147,11 @@ function Core:BuildLocalKnownSpells()
     local state = self:GetOrCreateState(guid)
     if not state then
         return
+    end
+
+    if #known == 0 then
+        local fallback = ns.spellsBySpec[GetPlayerSpecID()] or {}
+        for _, spellID in ipairs(fallback) do known[#known + 1] = spellID end
     end
 
     local known = {}
@@ -487,8 +498,9 @@ function Core:ToggleTest()
 end
 
 function Core:PrintStatus()
-    local mode = self.active and "actif en donjon" or "inactif hors donjon à 5"
-    ns.Print(mode .. " — suivi distant par synchronisation entre utilisateurs de l’addon.")
+    local scope = ns.db and ns.db.contentMode == "PARTY" and "tous les groupes de 5" or "donjons à 5"
+    local mode = self.active and "actif" or "inactif"
+    ns.Print(mode .. " — portée : " .. scope .. " — suivi distant par synchronisation entre utilisateurs de l’addon.")
 end
 
 function Core:RegisterRuntimeEvents()

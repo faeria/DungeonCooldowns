@@ -64,7 +64,7 @@ end
 
 function Options:ApplyValue(key, value)
     ns.db[key] = value
-    if key == "enabled" then ns.Core:UpdateActiveState() else ns.UI:ApplyLayout() end
+    if key == "enabled" or key == "contentMode" then ns.Core:UpdateActiveState() else ns.UI:ApplyLayout() end
     self:RefreshControls()
 end
 
@@ -146,14 +146,13 @@ function Options:CreateGeneralPage(parent)
     local page = CreateFrame("Frame", nil, parent); page:SetAllPoints()
     local activation = CreateCard(page, "Activation", "Contrôle global en donjon à cinq joueurs.", 0, 105)
     self:CreateToggle(activation, "enabled", "Activer Dungeon Cooldowns", "Affichage automatique uniquement dans les contenus à cinq joueurs.", 18, -54)
-    local display = CreateCard(page, "Éléments affichés", "Choisissez les informations utiles près des cadres.", -120, 220)
+    local scope = CreateCard(page, "Portée", "Détermine où l’affichage réel est activé.", -120, 100)
+    self:CreateCycle(scope, "contentMode", "Contenus pris en charge", {{value="DUNGEON",label="Donjons à 5 uniquement"},{value="PARTY",label="Tous les groupes de 5"}}, 18, -52, 240)
+    local display = CreateCard(page, "Éléments affichés", "Choisissez les informations utiles près des cadres.", -235, 220)
     self:CreateToggle(display, "showDefensive", "Cooldowns défensifs", "Ligne bleue des capacités défensives.", 18, -52)
     self:CreateToggle(display, "showOffensive", "Cooldowns offensifs", "Ligne orange des capacités offensives.", 18, -98)
     self:CreateToggle(display, "showReady", "Afficher les sorts disponibles", "Conserve l’icône lorsqu’un cooldown est prêt.", 18, -144)
     self:CreateSlider(display, "maxPerCategory", "Icônes maximum par catégorie", 1, 8, 1, 18, -192, 300, tostring)
-    local tracking = CreateCard(page, "Suivi distant", nil, -355, 100)
-    local text = CreateText(tracking, "Les cooldowns distants sont synchronisés entre utilisateurs de l’addon. Sans synchronisation, la spécialisation est inspectée mais la recharge exacte reste indisponible.", "GameFontHighlightSmall", "TOPLEFT", tracking, "TOPLEFT", 18, -42)
-    text:SetWidth(520); text:SetJustifyH("LEFT"); text:SetTextColor(unpack(COLORS.muted))
     return page
 end
 

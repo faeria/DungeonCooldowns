@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.4.0
+
+- Persistance explicite de chaque choix de sort dans `spellEnabled`, avec compatibilité des configurations précédentes.
+- Mise à jour immédiate des doublons d’un même sort entre spécialisations dans le sélecteur.
+- Découverte continue des cadres créés tardivement par Blizzard.
+- Prise en charge de `CompactPartyFrameMember1…5`, du pool de `CompactRaidFrameContainer` et du pool des party frames standards.
+- Ajout d’une portée configurable : donjons à cinq uniquement ou tous les groupes de cinq.
+- Repli sur la liste de spécialisation lorsque l’API du grimoire ne retourne aucun cooldown local.
+
 ## 1.3.0
 
 - Configuration entièrement externalisée des options Blizzard dans une fenêtre autonome ouverte avec `/dcd`.

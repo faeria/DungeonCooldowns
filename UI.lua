@@ -169,20 +169,26 @@ end
 function UI:GetUnitFrames()
     local frames = {}
     local seen = {}
-    if CompactPartyFrame and CompactPartyFrame.memberUnitFrames then
-        for _, frame in ipairs(CompactPartyFrame.memberUnitFrames) do
-            if frame and not seen[frame] then
-                seen[frame] = true
-                frames[#frames + 1] = frame
-            end
-        end
-    end
-    for index = 1, 5 do
-        local frame = _G["CompactRaidFrame" .. index]
-        if frame and not seen[frame] then
+    local function AddFrame(frame)
+        if frame and not seen[frame] and frame.GetObjectType then
             seen[frame] = true
             frames[#frames + 1] = frame
         end
+    end
+    if CompactPartyFrame and CompactPartyFrame.memberUnitFrames then
+        for _, frame in ipairs(CompactPartyFrame.memberUnitFrames) do AddFrame(frame) end
+    end
+    for index = 1, 5 do
+        AddFrame(_G["CompactPartyFrameMember" .. index])
+    end
+    for index = 1, 40 do
+        AddFrame(_G["CompactRaidFrame" .. index])
+    end
+    if CompactRaidFrameContainer and CompactRaidFrameContainer.unitFramePool then
+        for frame in CompactRaidFrameContainer.unitFramePool:EnumerateActive() do AddFrame(frame) end
+    end
+    if PartyFrame and PartyFrame.PartyMemberFramePool then
+        for frame in PartyFrame.PartyMemberFramePool:EnumerateActive() do AddFrame(frame) end
     end
     return frames
 end
@@ -197,6 +203,7 @@ function UI:EnsureFrames()
     end
 
     local foundAllFrames = true
+    local createdAny = false
     self.frameOrder = unitFrames
     for _, unitFrame in ipairs(unitFrames) do
         if not self.overlays[unitFrame] then
@@ -204,12 +211,13 @@ function UI:EnsureFrames()
                 foundAllFrames = false
             else
                 self:CreateOverlay(unitFrame)
+                createdAny = true
             end
         end
     end
 
     self.pendingFrames = foundAllFrames and nil or true
-    self:ApplyLayout()
+    if createdAny then self:ApplyLayout() end
     return foundAllFrames
 end
 
@@ -546,10 +554,10 @@ function UI:RefreshAll()
 end
 
 function UI:RefreshCooldowns()
-    if self.pendingFrames and not InCombatLockdown() then
+    if not InCombatLockdown() then
         local now = GetTime()
-        if not self.nextFrameRetry or now >= self.nextFrameRetry then
-            self.nextFrameRetry = now + 1
+        if not self.nextFrameDiscovery or now >= self.nextFrameDiscovery then
+            self.nextFrameDiscovery = now + 1
             self:EnsureFrames()
         end
     end

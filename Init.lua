@@ -1,7 +1,7 @@
 local addonName, ns = ...
 
 ns.addonName = addonName
-ns.version = "1.3.0"
+ns.version = "1.4.0"
 ns.protocol = 1
 ns.prefix = "DCD5"
 
@@ -16,6 +16,7 @@ ns.colors = {
 
 ns.defaults = {
     enabled = true,
+    contentMode = "DUNGEON",
     showOffensive = true,
     showDefensive = true,
     showReady = true,
@@ -32,20 +33,27 @@ ns.defaults = {
     borderSize = 1,
     maxPerCategory = 5,
     disabledSpells = {},
+    spellEnabled = {},
 }
 
 function ns.IsSpellEnabled(spellID)
-    if not ns.db or not ns.db.disabledSpells then
+    if not ns.db then
         return true
     end
     local _, canonicalID = ns.GetSpellData(spellID)
-    return ns.db.disabledSpells[tostring(canonicalID or spellID)] ~= true
+    local key = tostring(canonicalID or spellID)
+    if ns.db.spellEnabled and ns.db.spellEnabled[key] ~= nil then
+        return ns.db.spellEnabled[key] == true
+    end
+    return not ns.db.disabledSpells or ns.db.disabledSpells[key] ~= true
 end
 
 function ns.SetSpellEnabled(spellID, enabled)
     ns.db.disabledSpells = ns.db.disabledSpells or {}
+    ns.db.spellEnabled = ns.db.spellEnabled or {}
     local _, canonicalID = ns.GetSpellData(spellID)
     local key = tostring(canonicalID or spellID)
+    ns.db.spellEnabled[key] = enabled == true
     ns.db.disabledSpells[key] = enabled and nil or true
 end
 
