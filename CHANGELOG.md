@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.4.1
+
+- Correction du fallback local appelé avant la déclaration de la table `known` dans `BuildLocalKnownSpells`.
+
 ## 1.4.0
 
 - Persistance explicite de chaque choix de sort dans `spellEnabled`, avec compatibilité des configurations précédentes.

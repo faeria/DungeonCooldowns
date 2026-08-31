@@ -149,11 +149,6 @@ function Core:BuildLocalKnownSpells()
         return
     end
 
-    if #known == 0 then
-        local fallback = ns.spellsBySpec[GetPlayerSpecID()] or {}
-        for _, spellID in ipairs(fallback) do known[#known + 1] = spellID end
-    end
-
     local known = {}
     local seenGroups = {}
     for _, baseSpellID in ipairs(ns.spellOrder) do
@@ -185,6 +180,13 @@ function Core:BuildLocalKnownSpells()
                     known[#known + 1] = candidate
                 end
             end
+        end
+    end
+
+    if #known == 0 then
+        local fallback = ns.spellsBySpec[GetPlayerSpecID()] or {}
+        for _, spellID in ipairs(fallback) do
+            known[#known + 1] = spellID
         end
     end
 
