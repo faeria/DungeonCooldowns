@@ -11,7 +11,7 @@ Addon WoW Retail 12.1 affichant les principaux temps de recharge défensifs et o
 - État exact du joueur local via `C_Spell.GetSpellCooldown` et `C_Spell.GetSpellCharges`.
 - Filtrage du GCD : seules les véritables recharges des capacités sont dessinées sur les icônes locales.
 - Détection automatique des talents et remplacements de sorts du joueur local.
-- Synchronisation légère entre membres possédant l’addon : liste des sorts connus et notification d’utilisation.
+- Synchronisation légère entre membres possédant l’addon lorsque WoW autorise les messages addon : liste des sorts connus et notification d’utilisation.
 - Inspection de la spécialisation comme solution de secours pour déterminer les sorts potentiels.
 - Interface de configuration autonome ouverte avec `/dcd`, organisée en pages Général, Apparence et Sorts suivis.
 - Interface compacte : le sélecteur de sorts remplace temporairement la configuration au lieu de se superposer à elle.
@@ -59,10 +59,13 @@ Chaque push sur `main` déclenche automatiquement une release GitHub. Son tag re
 
 Retail 12.1 protège les temps de recharge, les incantations et certaines données du journal de combat des autres joueurs dans les contenus restreints, notamment les donjons et le mode défi. Un addon tiers ne peut pas contourner cette protection.
 
+Pendant une clé Mythique+, WoW active également un verrouillage global de la messagerie addon. Sur les royaumes normaux, `C_ChatInfo.SendAddonMessage` renvoie alors `AddOnMessageLockdown` et les addons tiers ne peuvent pas diffuser les utilisations de cooldown en temps réel. Les royaumes de tournoi peuvent autoriser ces émissions ; l’API `C_Commentator.SendAddonMessage` utilisée par le diffuseur Blizzard reste réservée à ces contextes de tournoi et MDI.
+
 En conséquence :
 
 - le temps de recharge du joueur local est exact ;
-- pour un autre joueur utilisant l’addon, l’utilisation du sort est synchronisée automatiquement, mais la durée affichée reste une estimation fondée sur la durée de base ;
+- hors verrouillage, l’utilisation d’un sort par un autre joueur utilisant l’addon est synchronisée automatiquement, avec une durée estimée fondée sur la durée de base ;
+- pendant une clé Mythique+, les sorts distants déjà découverts restent visibles mais leur état est marqué inconnu, sans faux indicateur « prêt » ;
 - pour un joueur sans l’addon, la spécialisation peut être inspectée hors combat, mais ses utilisations ne peuvent pas être suivies via le journal de combat protégé ;
 - les réductions de recharge liées aux talents, procs et resets ne peuvent pas être garanties à distance.
 

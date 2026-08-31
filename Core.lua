@@ -10,11 +10,26 @@ local Core = {
     pendingInspectGUID = nil,
     peers = {},
     unresolvedMessages = 0,
+    communicationState = "unavailable",
+    communicationReason = "inactive",
 }
 ns.Core = Core
 
 local eventFrame = CreateFrame("Frame")
 Core.eventFrame = eventFrame
+
+local PEER_TIMEOUT = 45
+
+local function GetSendResult(name, fallback)
+    local results = Enum and Enum.SendAddonMessageResult
+    if results and results[name] ~= nil then
+        return results[name]
+    end
+    return fallback
+end
+
+local SEND_SUCCESS = GetSendResult("Success", 0)
+local SEND_LOCKDOWN = GetSendResult("AddOnMessageLockdown", 11)
 
 local function CopyDefaults(target, defaults)
     for key, value in pairs(defaults) do
@@ -269,29 +284,103 @@ function Core:GetCommChannel()
     return "PARTY"
 end
 
+function Core:IsAddonMessagingLocked()
+    if not C_ChatInfo or not C_ChatInfo.InChatMessagingLockdown
+        or not C_ChatInfo.AreOutgoingAddonChatMessagesRestricted then
+        return false
+    end
+    return C_ChatInfo.InChatMessagingLockdown()
+        and C_ChatInfo.AreOutgoingAddonChatMessagesRestricted()
+end
+
+function Core:SetCommunicationState(state, reason, result)
+    local changed = self.communicationState ~= state or self.communicationReason ~= reason
+    self.communicationState = state
+    self.communicationReason = reason
+    if result ~= nil then
+        self.lastCommResult = result
+    end
+    if changed and ns.UI and ns.UI.RefreshAll then
+        ns.UI:RefreshAll()
+    end
+end
+
+function Core:GetRemoteTrackingReason(state)
+    if self:IsAddonMessagingLocked() or self.communicationState == "blocked" then
+        return "lockdown"
+    end
+    if not state or not state.synced then
+        return "unsynced"
+    end
+    local peer = self.peers[state.guid]
+    if not peer or not self.rosterGUIDs[state.guid] then
+        return "no-peer"
+    end
+    if not self:IsPeerRecent(state.guid) then
+        return "stale"
+    end
+    if self.communicationState ~= "available" then
+        return "unavailable"
+    end
+    return nil
+end
+
+function Core:IsPeerRecent(guid)
+    local peer = guid and self.peers[guid]
+    return peer ~= nil
+        and self.rosterGUIDs[guid] == true
+        and peer.lastSeen ~= nil
+        and GetTime() - peer.lastSeen <= PEER_TIMEOUT
+end
+
+function Core:IsRemoteTrackingAvailable(state)
+    if self.testMode or (state and state.isLocal) then
+        return true
+    end
+    return self:GetRemoteTrackingReason(state) == nil
+end
+
 function Core:Send(message)
     if not self.active then
         return false
     end
     local channel = self:GetCommChannel()
     if not channel then
+        self:SetCommunicationState("unavailable", "no-channel")
         return false
     end
+
+    local now = GetTime()
+    self.lastSendAttemptAt = now
+    self.lastSendChannel = channel
+    if self:IsAddonMessagingLocked() then
+        self:SetCommunicationState("blocked", "lockdown", SEND_LOCKDOWN)
+        return false
+    end
+
     local result = C_ChatInfo.SendAddonMessage(ns.prefix, message, channel)
     self.lastCommResult = result
-    self.lastSendAt = GetTime()
-    self.lastSendChannel = channel
-    return result == Enum.SendAddonMessageResult.Success
+    if result == SEND_SUCCESS then
+        self.lastSendAt = now
+        self:SetCommunicationState("available", nil, result)
+        return true
+    end
+    if result == SEND_LOCKDOWN then
+        self:SetCommunicationState("blocked", "lockdown", result)
+    else
+        self:SetCommunicationState("unavailable", "send-error", result)
+    end
+    return false
 end
 
 function Core:SendHello()
-    self:Send(table.concat({ "H", ns.protocol, UnitGUID("player") or "", ns.version or "?" }, "|"))
+    return self:Send(table.concat({ "H", ns.protocol, UnitGUID("player") or "", ns.version or "?" }, "|"))
 end
 
 function Core:SendKnownSpells()
     local state = self.states[UnitGUID("player")]
     if not state then
-        return
+        return false
     end
     local message = table.concat({
         "K",
@@ -302,12 +391,13 @@ function Core:SendKnownSpells()
         ns.version or "?",
     }, "|")
     if #message <= 255 then
-        self:Send(message)
+        return self:Send(message)
     end
+    return false
 end
 
 function Core:SendUsage(spellID)
-    self:Send(table.concat({ "U", ns.protocol, spellID, UnitGUID("player") or "", ns.version or "?" }, "|"))
+    return self:Send(table.concat({ "U", ns.protocol, spellID, UnitGUID("player") or "", ns.version or "?" }, "|"))
 end
 
 function Core:RecordUsage(guid, spellID, source)
@@ -355,7 +445,7 @@ end
 function Core:GetPeerCount()
     local count = 0
     for guid in pairs(self.peers) do
-        if self.rosterGUIDs[guid] then count = count + 1 end
+        if self:IsPeerRecent(guid) then count = count + 1 end
     end
     return count
 end
@@ -529,6 +619,7 @@ function Core:UpdateActiveState()
         wipe(self.rosterGUIDs)
         wipe(self.nameToGUID)
         wipe(self.peers)
+        self:SetCommunicationState("unavailable", "inactive")
     end
 
     ns.UI:RefreshAll()
@@ -551,8 +642,12 @@ function Core:InitializeRuntimeTickers()
     if not self.syncTicker then
         self.syncTicker = C_Timer.NewTicker(15, function()
             if Core.active then
-                Core:SendHello()
-                Core:SendKnownSpells()
+                if Core:IsAddonMessagingLocked() then
+                    Core:SetCommunicationState("blocked", "lockdown", SEND_LOCKDOWN)
+                else
+                    Core:SendHello()
+                    Core:SendKnownSpells()
+                end
             end
         end)
     end
@@ -598,7 +693,15 @@ function Core:PrintStatus()
         end
     end
     local channel = self:GetCommChannel() or "aucun"
-    ns.Print(mode .. " — portée : " .. scope .. " — " .. knownCount .. " CDs locaux — " .. visibleFrames .. " frame(s) visible(s) — canal : " .. channel .. " — " .. self:GetPeerCount() .. " addon(s) distant(s).")
+    local communication = self.communicationState or "unavailable"
+    if self:IsAddonMessagingLocked() or communication == "blocked" then
+        communication = "bloquée par WoW"
+    elseif communication == "available" then
+        communication = "disponible"
+    else
+        communication = "indisponible"
+    end
+    ns.Print(mode .. " — portée : " .. scope .. " — " .. knownCount .. " CDs locaux — " .. visibleFrames .. " frame(s) visible(s) — canal : " .. channel .. " — synchronisation : " .. communication .. " — " .. self:GetPeerCount() .. " addon(s) distant(s).")
 end
 
 function Core:PrintSyncStatus()
@@ -606,13 +709,30 @@ function Core:PrintSyncStatus()
         ns.Print("synchronisation inactive : l’addon ne détecte pas actuellement un donjon ou groupe autorisé.")
         return
     end
-    self:SendHello()
+    if self:IsAddonMessagingLocked() then
+        self.lastSendAttemptAt = GetTime()
+        self.lastSendChannel = self:GetCommChannel()
+        self:SetCommunicationState("blocked", "lockdown", SEND_LOCKDOWN)
+        ns.Print("synchronisation distante bloquée par WoW pendant la clé Mythique+ ; les cooldowns distants sont affichés comme inconnus.")
+        return
+    end
+
+    local sent = self:SendHello()
     self:SendKnownSpells()
+    if not sent then
+        if self.lastCommResult == SEND_LOCKDOWN or self.communicationState == "blocked" then
+            ns.Print("synchronisation distante bloquée par WoW pendant la clé Mythique+ ; les cooldowns distants sont affichés comme inconnus.")
+            return
+        end
+        local result = self.lastCommResult ~= nil and tostring(self.lastCommResult) or "inconnu"
+        ns.Print("échec du test de synchronisation sur " .. (self.lastSendChannel or "?") .. " — résultat : " .. result .. ".")
+        return
+    end
     ns.Print("test envoyé sur " .. (self.lastSendChannel or "?") .. " ; résultat dans une seconde…")
     C_Timer.After(1, function()
         local peers = {}
         for guid, peer in pairs(Core.peers) do
-            if Core.rosterGUIDs[guid] then
+            if Core:IsPeerRecent(guid) then
                 peers[#peers + 1] = (peer.name or guid) .. " (v" .. (peer.version or "?") .. ")"
             end
         end
