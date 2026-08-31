@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.4.3
+
+- Ajout d’une découverte générique des boutons d’unité visibles via `EnumerateFrames`.
+- Filtrage des cadres par token `player`, `party1…4` ou `raid1…5`, dimensions et nom de famille.
+- Exclusion des cadres joueur, cible, focus, boss, nameplates et des cadres internes de l’addon.
+- Le scan de secours est limité à une exécution toutes les cinq secondes.
+
 ## 1.4.2
 
 - Le mode étendu fonctionne désormais en solo avec les raid frames forcées par le mode d’édition Blizzard.

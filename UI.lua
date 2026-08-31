@@ -36,6 +36,14 @@ local function FormatSeconds(seconds)
     return string.format("%.1fs", math.max(0, seconds))
 end
 
+local function IsGroupUnit(unit)
+    return type(unit) == "string" and (
+        unit == "player"
+        or string.match(unit, "^party[1-4]$")
+        or string.match(unit, "^raid[1-5]$")
+    )
+end
+
 local function OnIconEnter(icon)
     if not icon.spellID then
         return
@@ -166,6 +174,69 @@ function UI:CreateTestPreview()
     self:CreateOverlay(frame)
 end
 
+function UI:GetFrameUnit(frame)
+    if not frame then return nil end
+    local unit
+    if frame.GetUnit then
+        local ok, value = pcall(frame.GetUnit, frame)
+        if ok then unit = value end
+    end
+    if not IsGroupUnit(unit) and frame.GetAttribute then
+        local ok, value = pcall(frame.GetAttribute, frame, "unit")
+        if ok then unit = value end
+    end
+    if not IsGroupUnit(unit) then
+        unit = frame.displayedUnit or frame.unit or frame.unitToken
+    end
+    return IsGroupUnit(unit) and unit or nil
+end
+
+function UI:DiscoverGenericUnitFrames(force)
+    if not EnumerateFrames then return end
+    local now = GetTime()
+    if not force and self.nextGenericDiscovery and now < self.nextGenericDiscovery then return end
+    self.nextGenericDiscovery = now + 5
+    self.genericUnitFrames = {}
+
+    local frame = EnumerateFrames()
+    local inspected = 0
+    while frame and inspected < 20000 do
+        inspected = inspected + 1
+        local forbidden = frame.IsForbidden and frame:IsForbidden()
+        if not forbidden and frame.IsVisible and frame:IsVisible() and frame.GetObjectType and not frame.isDungeonCooldownsTest then
+            local unit = self:GetFrameUnit(frame)
+            if unit then
+                local name = string.lower(frame:GetName() or "")
+                local excluded = string.find(name, "playerframe", 1, true)
+                    or string.find(name, "targetframe", 1, true)
+                    or string.find(name, "focusframe", 1, true)
+                    or string.find(name, "boss", 1, true)
+                    or string.find(name, "nameplate", 1, true)
+                    or string.find(name, "dungeoncooldowns", 1, true)
+                local width, height = frame:GetSize()
+                local hasSecureUnit = false
+                if frame.GetAttribute then
+                    local ok, value = pcall(frame.GetAttribute, frame, "unit")
+                    hasSecureUnit = ok and IsGroupUnit(value)
+                end
+                local namedGroupFrame = string.find(name, "compact", 1, true)
+                    or string.find(name, "party", 1, true)
+                    or string.find(name, "raid", 1, true)
+                    or string.find(name, "group", 1, true)
+                    or string.find(name, "cell", 1, true)
+                    or string.find(name, "grid", 1, true)
+                    or string.find(name, "vuhdo", 1, true)
+                    or string.find(name, "healbot", 1, true)
+                if not excluded and (hasSecureUnit or namedGroupFrame)
+                    and width >= 40 and width <= 500 and height >= 18 and height <= 180 then
+                    self.genericUnitFrames[#self.genericUnitFrames + 1] = frame
+                end
+            end
+        end
+        frame = EnumerateFrames(frame)
+    end
+end
+
 function UI:GetUnitFrames()
     local frames = {}
     local seen = {}
@@ -190,6 +261,8 @@ function UI:GetUnitFrames()
     if PartyFrame and PartyFrame.PartyMemberFramePool then
         for frame in PartyFrame.PartyMemberFramePool:EnumerateActive() do AddFrame(frame) end
     end
+    self:DiscoverGenericUnitFrames()
+    for _, frame in ipairs(self.genericUnitFrames or {}) do AddFrame(frame) end
     return frames
 end
 
@@ -495,11 +568,7 @@ function UI:RefreshOverlay(unitFrame, overlay)
     end
 
     local isTestPreview = unitFrame.isDungeonCooldownsTest
-    local unit
-    if unitFrame.GetUnit then
-        unit = unitFrame:GetUnit()
-    end
-    unit = unit or unitFrame.displayedUnit or unitFrame.unit or unitFrame.unitToken
+    local unit = self:GetFrameUnit(unitFrame)
     if not isTestPreview and (not unit or not UnitExists(unit) or not UnitIsPlayer(unit)) then
         overlay:Hide()
         return

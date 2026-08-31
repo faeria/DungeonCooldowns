@@ -513,6 +513,21 @@ function Core:PrintStatus()
     ns.Print(mode .. " — portée : " .. scope .. " — " .. knownCount .. " CDs locaux — " .. visibleFrames .. " frame(s) visible(s).")
 end
 
+function Core:PrintDetectedFrames()
+    ns.UI:DiscoverGenericUnitFrames(true)
+    local frames = ns.UI:GetUnitFrames()
+    ns.Print(#frames .. " frame(s) d’unité détectée(s) :")
+    for index, frame in ipairs(frames) do
+        if index > 12 then
+            ns.Print("… liste limitée aux 12 premières frames.")
+            break
+        end
+        local name = frame:GetName() or "<anonyme>"
+        local unit = ns.UI:GetFrameUnit(frame) or "?"
+        ns.Print(index .. ". " .. name .. " — " .. unit .. " — " .. math.floor(frame:GetWidth()) .. "x" .. math.floor(frame:GetHeight()))
+    end
+end
+
 function Core:RegisterRuntimeEvents()
     eventFrame:RegisterEvent("PLAYER_LOGIN")
     eventFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
