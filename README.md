@@ -45,6 +45,7 @@ Chaque push sur `main` déclenche automatiquement une release GitHub. Son tag re
 - `/dcd` : ouvrir l’interface autonome de configuration.
 - `/dcd test` : activer ou désactiver l’aperçu sur les cadres de groupe visibles.
 - `/dcd status` : afficher le contexte et le mode de suivi distant.
+- `/dcd sync` : relancer et diagnostiquer la synchronisation avec les autres joueurs du groupe.
 - `/dcd reset` : réinitialiser la configuration.
 - `/dcd help` : afficher l’aide.
 

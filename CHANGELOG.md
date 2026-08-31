@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.6.1
+
+- Priorité systématique à `INSTANCE_CHAT` lorsqu’un groupe d’instance existe, même en présence d’un groupe principal.
+- Nouvelle détection différée à 0,2, 1 et 3 secondes lors des changements de zone ou de groupe.
+- Revérification automatique du contexte toutes les deux secondes.
+- Resynchronisation des addons toutes les quinze secondes pour récupérer les chargements ou connexions tardifs.
+- Ajout du GUID et de la version aux messages, avec compatibilité du protocole précédent.
+- Nouvelle commande `/dcd sync` pour afficher le canal et les autres joueurs détectés avec l’addon.
+
 ## 1.6.0
 
 - Refonte visuelle compacte de la fenêtre de configuration et du sélecteur de sorts.

@@ -8,6 +8,8 @@ local Core = {
     testMode = false,
     inspectQueue = {},
     pendingInspectGUID = nil,
+    peers = {},
+    unresolvedMessages = 0,
 }
 ns.Core = Core
 
@@ -53,6 +55,17 @@ end
 
 local function ShortName(name)
     return name and Ambiguate(name, "short")
+end
+
+local function AddNameMapping(target, name, guid)
+    if not name or name == "" then return end
+    target[name] = guid
+    target[string.lower(name)] = guid
+    local shortName = ShortName(name)
+    if shortName and shortName ~= "" then
+        target[shortName] = guid
+        target[string.lower(shortName)] = guid
+    end
 end
 
 function Core:IsDungeonContent()
@@ -214,15 +227,9 @@ function Core:RebuildRoster()
                 state.class = select(2, UnitClass(unit))
                 state.fullName = FullUnitName(unit)
 
-                if state.fullName then
-                    self.nameToGUID[state.fullName] = guid
-                    self.nameToGUID[ShortName(state.fullName)] = guid
-                end
+                if state.fullName then AddNameMapping(self.nameToGUID, state.fullName, guid) end
                 local displayName = GetUnitName(unit, true)
-                if displayName then
-                    self.nameToGUID[displayName] = guid
-                    self.nameToGUID[ShortName(displayName)] = guid
-                end
+                if displayName then AddNameMapping(self.nameToGUID, displayName, guid) end
             end
         end
     end
@@ -232,19 +239,31 @@ function Core:RebuildRoster()
             self.states[guid] = nil
         end
     end
+    for guid in pairs(self.peers) do
+        if not present[guid] then self.peers[guid] = nil end
+    end
 
     self:BuildLocalKnownSpells()
 end
 
-function Core:GetGUIDFromSender(sender)
-    return self.nameToGUID[sender] or self.nameToGUID[ShortName(sender)]
+function Core:GetGUIDFromSender(sender, advertisedGUID)
+    if advertisedGUID and self.rosterGUIDs[advertisedGUID] then
+        return advertisedGUID
+    end
+    if not sender then return nil end
+    return self.nameToGUID[sender]
+        or self.nameToGUID[string.lower(sender)]
+        or self.nameToGUID[ShortName(sender)]
+        or self.nameToGUID[string.lower(ShortName(sender) or "")]
 end
 
 function Core:GetCommChannel()
     if not IsInGroup() then
         return nil
     end
-    if IsInGroup(LE_PARTY_CATEGORY_INSTANCE) and not IsInGroup(LE_PARTY_CATEGORY_HOME) then
+    -- An LFG/LFR instance group can coexist with a home party. INSTANCE_CHAT
+    -- must win so the message reaches every player in the actual dungeon.
+    if LE_PARTY_CATEGORY_INSTANCE and IsInGroup(LE_PARTY_CATEGORY_INSTANCE) then
         return "INSTANCE_CHAT"
     end
     return "PARTY"
@@ -260,11 +279,13 @@ function Core:Send(message)
     end
     local result = C_ChatInfo.SendAddonMessage(ns.prefix, message, channel)
     self.lastCommResult = result
+    self.lastSendAt = GetTime()
+    self.lastSendChannel = channel
     return result == Enum.SendAddonMessageResult.Success
 end
 
 function Core:SendHello()
-    self:Send("H|" .. ns.protocol)
+    self:Send(table.concat({ "H", ns.protocol, UnitGUID("player") or "", ns.version or "?" }, "|"))
 end
 
 function Core:SendKnownSpells()
@@ -277,14 +298,16 @@ function Core:SendKnownSpells()
         ns.protocol,
         state.specID or 0,
         table.concat(state.known, ","),
+        UnitGUID("player") or "",
+        ns.version or "?",
     }, "|")
-    if #message <= 250 then
+    if #message <= 255 then
         self:Send(message)
     end
 end
 
 function Core:SendUsage(spellID)
-    self:Send(table.concat({ "U", ns.protocol, spellID }, "|"))
+    self:Send(table.concat({ "U", ns.protocol, spellID, UnitGUID("player") or "", ns.version or "?" }, "|"))
 end
 
 function Core:RecordUsage(guid, spellID, source)
@@ -318,10 +341,50 @@ function Core:RecordUsage(guid, spellID, source)
     return true
 end
 
-function Core:HandleAddonMessage(message, sender)
-    local kind, protocol, value1, value2 = strsplit("|", message)
+function Core:MarkPeer(guid, sender, channel, version)
+    if not guid or guid == UnitGUID("player") then return end
+    local peer = self.peers[guid] or {}
+    peer.guid = guid
+    peer.name = sender or peer.name
+    peer.channel = channel or peer.channel
+    peer.version = version or peer.version or "ancienne"
+    peer.lastSeen = GetTime()
+    self.peers[guid] = peer
+end
+
+function Core:GetPeerCount()
+    local count = 0
+    for guid in pairs(self.peers) do
+        if self.rosterGUIDs[guid] then count = count + 1 end
+    end
+    return count
+end
+
+function Core:HandleAddonMessage(message, sender, channel)
+    local kind, protocol, value1, value2, value3, value4 = strsplit("|", message)
     if tonumber(protocol) ~= ns.protocol then
         return
+    end
+
+    local advertisedGUID
+    local version
+    if kind == "H" then
+        advertisedGUID, version = value1, value2
+    elseif kind == "K" then
+        advertisedGUID, version = value3, value4
+    elseif kind == "U" then
+        advertisedGUID, version = value2, value3
+    end
+
+    local guid = self:GetGUIDFromSender(sender, advertisedGUID)
+    self.lastReceiveAt = GetTime()
+    self.lastReceiveSender = sender
+    self.lastReceiveChannel = channel
+    if guid == UnitGUID("player") then return end
+    if guid then
+        self:MarkPeer(guid, sender, channel, version)
+    else
+        self.unresolvedMessages = (self.unresolvedMessages or 0) + 1
     end
 
     if kind == "H" then
@@ -333,10 +396,7 @@ function Core:HandleAddonMessage(message, sender)
         return
     end
 
-    local guid = self:GetGUIDFromSender(sender)
-    if not guid or guid == UnitGUID("player") then
-        return
-    end
+    if not guid then return end
     local state = self:GetOrCreateState(guid)
 
     if kind == "K" then
@@ -468,9 +528,34 @@ function Core:UpdateActiveState()
         wipe(self.states)
         wipe(self.rosterGUIDs)
         wipe(self.nameToGUID)
+        wipe(self.peers)
     end
 
     ns.UI:RefreshAll()
+end
+
+function Core:ScheduleActiveRefresh()
+    for _, delay in ipairs({ 0.2, 1.0, 3.0 }) do
+        C_Timer.After(delay, function() Core:UpdateActiveState() end)
+    end
+end
+
+function Core:InitializeRuntimeTickers()
+    if not self.activeTicker then
+        self.activeTicker = C_Timer.NewTicker(2, function()
+            if Core:IsDungeonContent() ~= Core.active then
+                Core:UpdateActiveState()
+            end
+        end)
+    end
+    if not self.syncTicker then
+        self.syncTicker = C_Timer.NewTicker(15, function()
+            if Core.active then
+                Core:SendHello()
+                Core:SendKnownSpells()
+            end
+        end)
+    end
 end
 
 function Core:StartTest()
@@ -512,7 +597,32 @@ function Core:PrintStatus()
             if ns.UI:IsUnitFrameVisible(frame) then visibleFrames = visibleFrames + 1 end
         end
     end
-    ns.Print(mode .. " — portée : " .. scope .. " — " .. knownCount .. " CDs locaux — " .. visibleFrames .. " frame(s) visible(s).")
+    local channel = self:GetCommChannel() or "aucun"
+    ns.Print(mode .. " — portée : " .. scope .. " — " .. knownCount .. " CDs locaux — " .. visibleFrames .. " frame(s) visible(s) — canal : " .. channel .. " — " .. self:GetPeerCount() .. " addon(s) distant(s).")
+end
+
+function Core:PrintSyncStatus()
+    if not self.active then
+        ns.Print("synchronisation inactive : l’addon ne détecte pas actuellement un donjon ou groupe autorisé.")
+        return
+    end
+    self:SendHello()
+    self:SendKnownSpells()
+    ns.Print("test envoyé sur " .. (self.lastSendChannel or "?") .. " ; résultat dans une seconde…")
+    C_Timer.After(1, function()
+        local peers = {}
+        for guid, peer in pairs(Core.peers) do
+            if Core.rosterGUIDs[guid] then
+                peers[#peers + 1] = (peer.name or guid) .. " (v" .. (peer.version or "?") .. ")"
+            end
+        end
+        table.sort(peers)
+        ns.Print("addons distants détectés : " .. #peers .. ".")
+        if #peers > 0 then ns.Print(table.concat(peers, ", ")) end
+        if (Core.unresolvedMessages or 0) > 0 then
+            ns.Print(Core.unresolvedMessages .. " message(s) reçu(s) sans joueur associé.")
+        end
+    end)
 end
 
 function Core:PrintDetectedFrames()
@@ -557,10 +667,11 @@ function Core:Initialize()
     DungeonCooldownsDB.maxPerCategory = nil
     ns.db = DungeonCooldownsDB
 
-    C_ChatInfo.RegisterAddonMessagePrefix(ns.prefix)
+    self.prefixResult = C_ChatInfo.RegisterAddonMessagePrefix(ns.prefix)
     ns.UI:Initialize()
     ns.Options:Initialize()
     self:RegisterRuntimeEvents()
+    self:InitializeRuntimeTickers()
 end
 
 function Core:OnEvent(event, ...)
@@ -575,13 +686,14 @@ function Core:OnEvent(event, ...)
         self:UpdateActiveState()
     elseif event == "PLAYER_ENTERING_WORLD" or event == "GROUP_ROSTER_UPDATE" or event == "ZONE_CHANGED_NEW_AREA"
         or event == "CHALLENGE_MODE_START" or event == "CHALLENGE_MODE_RESET" then
-        C_Timer.After(0.2, function()
-            Core:UpdateActiveState()
-        end)
+        self:ScheduleActiveRefresh()
     elseif event == "CHAT_MSG_ADDON" then
-        local prefix, message, _, sender = ...
+        local prefix, message, channel, sender = ...
+        if prefix == ns.prefix and not self.active and self:IsDungeonContent() then
+            self:UpdateActiveState()
+        end
         if self.active and prefix == ns.prefix then
-            self:HandleAddonMessage(message, sender)
+            self:HandleAddonMessage(message, sender, channel)
         end
     elseif event == "UNIT_SPELLCAST_SUCCEEDED" then
         local unit, _, spellID = ...
