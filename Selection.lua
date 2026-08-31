@@ -222,12 +222,13 @@ function Selector:Create()
 
     self.classButtons = {}
     for classID = 1, 13 do
-        local button = CreateButton(frame, GetClassLabel(classID), 89, 25)
+        local buttonClassID = classID
+        local button = CreateButton(frame, GetClassLabel(buttonClassID), 89, 25)
         local column = (classID - 1) % 7
         local line = math.floor((classID - 1) / 7)
         button:SetPoint("TOPLEFT", 24 + column * 93, -72 - line * 29)
-        button:SetScript("OnClick", function() Selector:SelectClass(classID) end)
-        self.classButtons[classID] = button
+        button:SetScript("OnClick", function() Selector:SelectClass(buttonClassID) end)
+        self.classButtons[buttonClassID] = button
     end
 
     local scroll = CreateFrame("ScrollFrame", nil, frame, "UIPanelScrollFrameTemplate")
@@ -247,9 +248,9 @@ function Selector:Create()
     none:SetPoint("LEFT", all, "RIGHT", 8, 0)
     none:SetScript("OnClick", function() Selector:SetClassEnabled(false) end)
 
-    local preview = CreateButton(frame, "Aperçu 20 s", 110)
+    local preview = CreateButton(frame, "Activer / désactiver l’aperçu", 190)
     preview:SetPoint("LEFT", none, "RIGHT", 8, 0)
-    preview:SetScript("OnClick", function() ns.Core:StartTest() end)
+    preview:SetScript("OnClick", function() ns.Core:ToggleTest() end)
 
     local done = CreateButton(frame, "Fermer", 90)
     done:SetPoint("BOTTOMRIGHT", -24, 20)

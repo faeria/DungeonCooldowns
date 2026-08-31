@@ -461,25 +461,29 @@ function Core:UpdateActiveState()
 end
 
 function Core:StartTest()
+    if self.testMode then
+        return
+    end
     self.testMode = true
     self.testStarted = GetTime()
     ns.UI:EnsureFrames()
     ns.UI:RefreshAll()
-    ns.Print("aperçu actif pendant 20 secondes sur vos cadres de groupe.")
-
-    local started = self.testStarted
-    C_Timer.After(20, function()
-        if Core.testMode and Core.testStarted == started then
-            Core.testMode = false
-            ns.UI:RefreshAll()
-            ns.Print("mode test terminé.")
-        end
-    end)
+    if ns.Options then ns.Options:RefreshPreviewButton() end
+    ns.Print("aperçu activé sur vos cadres de groupe.")
 end
 
 function Core:StopTest()
+    if not self.testMode then
+        return
+    end
     self.testMode = false
     ns.UI:RefreshAll()
+    if ns.Options then ns.Options:RefreshPreviewButton() end
+    ns.Print("aperçu désactivé.")
+end
+
+function Core:ToggleTest()
+    if self.testMode then self:StopTest() else self:StartTest() end
 end
 
 function Core:PrintStatus()

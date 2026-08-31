@@ -361,13 +361,18 @@ function UI:GetTestEntries(unitFrame)
         source = "synced",
     }
     local now = GetTime()
-    local started = ns.Core.testStarted or now
+    local testElapsed = now - (ns.Core.testStarted or now)
     local first = testSpells[1]
     local second = testSpells[2]
     local fourth = testSpells[4]
-    if first then state.timers[first] = { start = started - 18, duration = 120, expires = started + 102 } end
-    if second then state.timers[second] = { start = started - 32, duration = 90, expires = started + 58 } end
-    if fourth then state.timers[fourth] = { start = started - 22, duration = 120, expires = started + 98 } end
+    local function AddLoopingTimer(spellID, duration, offset)
+        if not spellID then return end
+        local elapsed = (testElapsed + offset) % duration
+        state.timers[spellID] = { start = now - elapsed, duration = duration, expires = now + duration - elapsed }
+    end
+    AddLoopingTimer(first, 120, 18)
+    AddLoopingTimer(second, 90, 32)
+    AddLoopingTimer(fourth, 120, 54)
     return self:GetEntries(state, false), state
 end
 
@@ -550,6 +555,11 @@ function UI:RefreshCooldowns()
     end
 
     if not ns.Core or not ns.Core:IsDisplayActive() then
+        return
+    end
+
+    if ns.Core.testMode then
+        self:RefreshAll()
         return
     end
 

@@ -12,7 +12,8 @@ Addon WoW Retail 12.1 affichant les principaux temps de recharge défensifs et o
 - Détection automatique des talents et remplacements de sorts du joueur local.
 - Synchronisation légère entre membres possédant l’addon : liste des sorts connus et notification d’utilisation.
 - Inspection de la spécialisation comme solution de secours pour déterminer les sorts potentiels.
-- Configuration native dans **Options > AddOns > Dungeon Cooldowns** : côté, alignement, décalages, distance à la frame, taille, espacements, opacité, bordure, nombre d’icônes et affichage des CDs disponibles.
+- Interface de configuration autonome ouverte avec `/dcd`, organisée en pages Général, Apparence et Sorts suivis.
+- Personnalisation du côté, de l’alignement, des décalages, de la distance à la frame, de la taille, des espacements, de l’opacité, des bordures et du nombre d’icônes.
 - Sélection précise des cooldowns à afficher, organisée par classe et spécialisation, avec choix individuel et actions « tout sélectionner / tout masquer ».
 - Aperçu réaliste directement sur les cadres `CompactPartyFrame` ou `CompactRaidFrame` visibles ; une raid frame de secours est utilisée uniquement lorsqu’aucun cadre Blizzard n’est disponible.
 - Aucun framework ni bibliothèque externe.
@@ -37,8 +38,8 @@ Chaque push sur `main` déclenche automatiquement une release GitHub. Son tag re
 
 ## Commandes
 
-- `/dcd` : ouvrir **Options > AddOns > Dungeon Cooldowns**.
-- `/dcd test` : afficher un aperçu pendant 20 secondes sur les cadres de groupe visibles.
+- `/dcd` : ouvrir l’interface autonome de configuration.
+- `/dcd test` : activer ou désactiver l’aperçu sur les cadres de groupe visibles.
 - `/dcd status` : afficher le contexte et le mode de suivi distant.
 - `/dcd reset` : réinitialiser la configuration.
 - `/dcd help` : afficher l’aide.

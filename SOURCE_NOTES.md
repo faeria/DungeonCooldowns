@@ -8,9 +8,9 @@ Référence analysée : `Gethe/wow-ui-source`, branche `live`, commit `027d26c34
 
 L’addon ne génère jamais les cadres de groupe, ne leur ajoute aucun enfant, ne modifie aucun attribut sécurisé et reporte les créations ou repositionnements demandés pendant `InCombatLockdown()` jusqu’à `PLAYER_REGEN_ENABLED`.
 
-## Options Blizzard
+## Interface de configuration
 
-La catégorie de configuration emploie l’API verticale documentée dans `Blizzard_Settings_Shared/Blizzard_ImplementationReadme.lua` : `Settings.RegisterVerticalLayoutCategory`, `Settings.RegisterAddOnSetting` et `Settings.RegisterAddOnCategory`. Elle apparaît ainsi nativement sous **Options > AddOns**.
+La configuration utilise exclusivement des cadres indépendants sous `UIParent`. Elle ne s’enregistre plus dans l’API `Settings` de Blizzard et n’interagit pas avec les cadres sécurisés. La fenêtre autonome est ouverte avec `/dcd` et ses réglages sont conservés dans `DungeonCooldownsDB`.
 
 ## Temps de recharge local
 

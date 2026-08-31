@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.3.0
+
+- Configuration entièrement externalisée des options Blizzard dans une fenêtre autonome ouverte avec `/dcd`.
+- Nouvelle interface sombre organisée en pages Général, Apparence et Sorts suivis.
+- Remplacement du test limité à vingt secondes par un aperçu activable et désactivable à volonté.
+- Animation continue des cooldowns simulés pendant l’aperçu.
+- Application immédiate de tous les réglages visuels sur les raid frames.
+
 ## 1.2.0
 
 - Refonte visuelle complète du sélecteur de sorts et correction des textures de checkbox étirées.

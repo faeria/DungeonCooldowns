@@ -1,250 +1,281 @@
 local _, ns = ...
 
-local Options = {
-    settings = {},
-}
+local Options = { controls = {}, pages = {}, tabButtons = {}, activePage = "GENERAL" }
 ns.Options = Options
 
-local SETTING_VARIABLES = {
-    enabled = "DUNGEON_COOLDOWNS_ENABLED",
-    showDefensive = "DUNGEON_COOLDOWNS_SHOW_DEFENSIVE",
-    showOffensive = "DUNGEON_COOLDOWNS_SHOW_OFFENSIVE",
-    showReady = "DUNGEON_COOLDOWNS_SHOW_READY",
-    side = "DUNGEON_COOLDOWNS_SIDE",
-    iconSize = "DUNGEON_COOLDOWNS_ICON_SIZE",
-    spacing = "DUNGEON_COOLDOWNS_ICON_SPACING",
-    rowSpacing = "DUNGEON_COOLDOWNS_ROW_SPACING",
-    frameGap = "DUNGEON_COOLDOWNS_FRAME_GAP",
-    offsetX = "DUNGEON_COOLDOWNS_OFFSET_X",
-    offsetY = "DUNGEON_COOLDOWNS_OFFSET_Y",
-    alignment = "DUNGEON_COOLDOWNS_ALIGNMENT",
-    iconAlpha = "DUNGEON_COOLDOWNS_ICON_ALPHA",
-    borderStyle = "DUNGEON_COOLDOWNS_BORDER_STYLE",
-    borderSize = "DUNGEON_COOLDOWNS_BORDER_SIZE",
-    maxPerCategory = "DUNGEON_COOLDOWNS_MAX_PER_CATEGORY",
+local COLORS = {
+    panel = { 0.025, 0.030, 0.042, 0.99 }, card = { 0.055, 0.065, 0.085, 0.96 },
+    border = { 0.18, 0.22, 0.29, 1 }, accent = { 0.10, 0.62, 0.92, 1 },
+    accentHover = { 0.16, 0.72, 1.00, 1 }, muted = { 0.62, 0.67, 0.74 },
+    success = { 0.16, 0.78, 0.42, 1 },
 }
 
-local function ApplySetting(key)
-    if key == "enabled" then
-        ns.Core:UpdateActiveState()
+local function SetBackdrop(frame, background, border)
+    frame:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Buttons\\WHITE8X8", edgeSize = 1 })
+    frame:SetBackdropColor(unpack(background or COLORS.card))
+    frame:SetBackdropBorderColor(unpack(border or COLORS.border))
+end
+
+local function CreateText(parent, text, font, anchor, relative, relativeAnchor, x, y)
+    local label = parent:CreateFontString(nil, "OVERLAY", font or "GameFontHighlight")
+    label:SetPoint(anchor or "TOPLEFT", relative or parent, relativeAnchor or anchor or "TOPLEFT", x or 0, y or 0)
+    label:SetText(text or "")
+    return label
+end
+
+local function CreateButton(parent, text, width, height, callback)
+    local button = CreateFrame("Button", nil, parent, "BackdropTemplate")
+    button:SetSize(width or 150, height or 32)
+    SetBackdrop(button, { 0.09, 0.11, 0.15, 1 }, COLORS.border)
+    button.normalBackground = { 0.09, 0.11, 0.15, 1 }
+    button.normalBorder = { unpack(COLORS.border) }
+    function button:SetStyle(background, border)
+        self.normalBackground = { unpack(background) }
+        self.normalBorder = { unpack(border) }
+        self:SetBackdropColor(unpack(self.normalBackground))
+        self:SetBackdropBorderColor(unpack(self.normalBorder))
+    end
+    button.label = CreateText(button, text, "GameFontHighlight", "CENTER")
+    button:SetScript("OnEnter", function(self)
+        self:SetBackdropColor(0.14, 0.18, 0.24, 1)
+        self:SetBackdropBorderColor(unpack(COLORS.accentHover))
+    end)
+    button:SetScript("OnLeave", function(self)
+        self:SetBackdropColor(unpack(self.normalBackground))
+        self:SetBackdropBorderColor(unpack(self.normalBorder))
+    end)
+    button:SetScript("OnClick", callback)
+    return button
+end
+
+local function CreateCard(parent, title, description, top, height)
+    local card = CreateFrame("Frame", nil, parent, "BackdropTemplate")
+    card:SetPoint("TOPLEFT", 0, top)
+    card:SetPoint("TOPRIGHT", 0, top)
+    card:SetHeight(height)
+    SetBackdrop(card)
+    CreateText(card, title, "GameFontNormalLarge", "TOPLEFT", card, "TOPLEFT", 18, -15)
+    if description then
+        local info = CreateText(card, description, "GameFontHighlightSmall", "TOPLEFT", card, "TOPLEFT", 18, -39)
+        info:SetTextColor(unpack(COLORS.muted))
+    end
+    return card
+end
+
+function Options:ApplyValue(key, value)
+    ns.db[key] = value
+    if key == "enabled" then ns.Core:UpdateActiveState() else ns.UI:ApplyLayout() end
+    self:RefreshControls()
+end
+
+function Options:CreateToggle(parent, key, label, description, x, y)
+    local row = CreateFrame("Button", nil, parent)
+    row:SetSize(500, 42)
+    row:SetPoint("TOPLEFT", x, y)
+    local box = CreateFrame("Frame", nil, row, "BackdropTemplate")
+    box:SetSize(38, 20)
+    box:SetPoint("LEFT")
+    SetBackdrop(box, { 0.12, 0.13, 0.16, 1 }, COLORS.border)
+    box.knob = box:CreateTexture(nil, "OVERLAY")
+    box.knob:SetSize(14, 14)
+    box.knob:SetColorTexture(0.82, 0.85, 0.89, 1)
+    CreateText(row, label, "GameFontHighlight", "TOPLEFT", row, "TOPLEFT", 52, -4)
+    if description then
+        local info = CreateText(row, description, "GameFontHighlightSmall", "TOPLEFT", row, "TOPLEFT", 52, -23)
+        info:SetTextColor(unpack(COLORS.muted))
+    end
+    function row:SetValue(value)
+        self.value = value and true or false
+        box.knob:ClearAllPoints()
+        if self.value then
+            box:SetBackdropColor(unpack(COLORS.success)); box:SetBackdropBorderColor(0.22, 0.92, 0.52, 1); box.knob:SetPoint("RIGHT", -3, 0)
+        else
+            box:SetBackdropColor(0.12, 0.13, 0.16, 1); box:SetBackdropBorderColor(unpack(COLORS.border)); box.knob:SetPoint("LEFT", 3, 0)
+        end
+    end
+    row:SetScript("OnClick", function(self) Options:ApplyValue(key, not self.value) end)
+    self.controls[key] = row
+end
+
+function Options:CreateCycle(parent, key, label, values, x, y, width)
+    CreateText(parent, label, "GameFontHighlight", "TOPLEFT", parent, "TOPLEFT", x, y)
+    local button = CreateButton(parent, "", width or 180, 30, function(self)
+        local currentIndex = 1
+        for index, option in ipairs(values) do if option.value == ns.db[key] then currentIndex = index break end end
+        Options:ApplyValue(key, values[(currentIndex % #values) + 1].value)
+    end)
+    button:SetPoint("TOPLEFT", x, y - 23)
+    button.values = values
+    function button:SetValue(value)
+        for _, option in ipairs(self.values) do if option.value == value then self.label:SetText(option.label) return end end
+        self.label:SetText(tostring(value))
+    end
+    self.controls[key] = button
+end
+
+function Options:CreateSlider(parent, key, label, minimum, maximum, step, x, y, width, formatter)
+    CreateText(parent, label, "GameFontHighlight", "TOPLEFT", parent, "TOPLEFT", x, y)
+    local valueLabel = CreateText(parent, "", "GameFontNormal", "TOPRIGHT", parent, "TOPLEFT", x + width, y)
+    valueLabel:SetTextColor(unpack(COLORS.accentHover))
+    local slider = CreateFrame("Slider", nil, parent, "BackdropTemplate")
+    slider:SetPoint("TOPLEFT", x, y - 24)
+    slider:SetSize(width, 8)
+    slider:SetOrientation("HORIZONTAL")
+    slider:SetMinMaxValues(minimum, maximum)
+    slider:SetValueStep(step)
+    slider:SetObeyStepOnDrag(true)
+    SetBackdrop(slider, { 0.10, 0.12, 0.16, 1 }, { 0.14, 0.17, 0.22, 1 })
+    slider:SetThumbTexture("Interface\\Buttons\\WHITE8X8")
+    local thumb = slider:GetThumbTexture()
+    thumb:SetSize(14, 18)
+    thumb:SetColorTexture(unpack(COLORS.accent))
+    slider.formatter, slider.valueLabel, slider.suppress = formatter or tostring, valueLabel, false
+    function slider:SetDisplayValue(value)
+        self.suppress = true; self:SetValue(value); self.valueLabel:SetText(self.formatter(value)); self.suppress = false
+    end
+    slider:SetScript("OnValueChanged", function(self, value)
+        if self.suppress then return end
+        local rounded = math.floor((value / step) + 0.5) * step
+        self.valueLabel:SetText(self.formatter(rounded))
+        Options:ApplyValue(key, rounded)
+    end)
+    self.controls[key] = slider
+end
+
+function Options:CreateGeneralPage(parent)
+    local page = CreateFrame("Frame", nil, parent); page:SetAllPoints()
+    local activation = CreateCard(page, "Activation", "Contrôle global en donjon à cinq joueurs.", 0, 105)
+    self:CreateToggle(activation, "enabled", "Activer Dungeon Cooldowns", "Affichage automatique uniquement dans les contenus à cinq joueurs.", 18, -54)
+    local display = CreateCard(page, "Éléments affichés", "Choisissez les informations utiles près des cadres.", -120, 220)
+    self:CreateToggle(display, "showDefensive", "Cooldowns défensifs", "Ligne bleue des capacités défensives.", 18, -52)
+    self:CreateToggle(display, "showOffensive", "Cooldowns offensifs", "Ligne orange des capacités offensives.", 18, -98)
+    self:CreateToggle(display, "showReady", "Afficher les sorts disponibles", "Conserve l’icône lorsqu’un cooldown est prêt.", 18, -144)
+    self:CreateSlider(display, "maxPerCategory", "Icônes maximum par catégorie", 1, 8, 1, 18, -192, 300, tostring)
+    local tracking = CreateCard(page, "Suivi distant", nil, -355, 100)
+    local text = CreateText(tracking, "Les cooldowns distants sont synchronisés entre utilisateurs de l’addon. Sans synchronisation, la spécialisation est inspectée mais la recharge exacte reste indisponible.", "GameFontHighlightSmall", "TOPLEFT", tracking, "TOPLEFT", 18, -42)
+    text:SetWidth(520); text:SetJustifyH("LEFT"); text:SetTextColor(unpack(COLORS.muted))
+    return page
+end
+
+function Options:CreateAppearancePage(parent)
+    local page = CreateFrame("Frame", nil, parent); page:SetAllPoints()
+    local placement = CreateCard(page, "Position", "Placement précis par rapport à chaque raid frame.", 0, 205)
+    self:CreateCycle(placement, "side", "Côté", {{value="LEFT",label="À gauche"},{value="RIGHT",label="À droite"}}, 18, -58, 180)
+    self:CreateCycle(placement, "alignment", "Alignement vertical", {{value="TOP",label="Haut"},{value="CENTER",label="Centre"},{value="BOTTOM",label="Bas"}}, 220, -58, 180)
+    self:CreateSlider(placement, "frameGap", "Distance de la frame", 0, 30, 1, 18, -122, 180, function(v) return string.format("%d px", v) end)
+    self:CreateSlider(placement, "offsetX", "Décalage horizontal", -100, 100, 1, 220, -122, 180, function(v) return string.format("%+d px", v) end)
+    self:CreateSlider(placement, "offsetY", "Décalage vertical", -100, 100, 1, 422, -122, 150, function(v) return string.format("%+d px", v) end)
+    local icons = CreateCard(page, "Icônes", "Dimensions, densité et apparence des cooldowns.", -220, 250)
+    self:CreateSlider(icons, "iconSize", "Taille", 14, 40, 1, 18, -60, 180, function(v) return string.format("%d px", v) end)
+    self:CreateSlider(icons, "spacing", "Espacement horizontal", 0, 10, 1, 220, -60, 180, function(v) return string.format("%d px", v) end)
+    self:CreateSlider(icons, "rowSpacing", "Espacement des lignes", 0, 12, 1, 422, -60, 150, function(v) return string.format("%d px", v) end)
+    self:CreateSlider(icons, "iconAlpha", "Opacité", 0.30, 1, 0.05, 18, -130, 180, function(v) return string.format("%d %%", math.floor(v * 100 + 0.5)) end)
+    self:CreateCycle(icons, "borderStyle", "Style de bordure", {{value="CATEGORY",label="Couleur de catégorie"},{value="DARK",label="Sombre"},{value="NONE",label="Aucune"}}, 220, -130, 180)
+    self:CreateSlider(icons, "borderSize", "Épaisseur de bordure", 1, 4, 1, 422, -130, 150, function(v) return string.format("%d px", v) end)
+    local tip = CreateText(icons, "Activez l’aperçu en bas : chaque modification est visible immédiatement.", "GameFontHighlightSmall", "BOTTOMLEFT", icons, "BOTTOMLEFT", 18, 20)
+    tip:SetTextColor(unpack(COLORS.muted))
+    return page
+end
+
+function Options:CreateSpellsPage(parent)
+    local page = CreateFrame("Frame", nil, parent); page:SetAllPoints()
+    local card = CreateCard(page, "Cooldowns suivis", "Sélection individuelle par classe et spécialisation.", 0, 190)
+    local text = CreateText(card, "La sélection s’applique à votre personnage et à tous les membres du groupe. Les sorts masqués ne consomment aucune place dans l’affichage.", "GameFontHighlight", "TOPLEFT", card, "TOPLEFT", 18, -62)
+    text:SetWidth(520); text:SetJustifyH("LEFT")
+    local open = CreateButton(card, "Ouvrir le sélecteur de sorts", 240, 36, function() ns.CooldownSelector:Open() end)
+    open:SetPoint("BOTTOMLEFT", 18, 20)
+    return page
+end
+
+function Options:SelectPage(pageID)
+    self.activePage = pageID
+    for id, page in pairs(self.pages) do page:SetShown(id == pageID) end
+    for id, button in pairs(self.tabButtons) do
+        if id == pageID then
+            button:SetStyle({ 0.08, 0.32, 0.49, 1 }, COLORS.accent); button.label:SetTextColor(0.75, 0.93, 1, 1)
+        else
+            button:SetStyle({ 0.045, 0.052, 0.068, 1 }, { 0.09, 0.11, 0.15, 1 }); button.label:SetTextColor(0.72, 0.75, 0.80, 1)
+        end
+    end
+end
+
+function Options:RefreshPreviewButton()
+    if not self.previewButton then return end
+    if ns.Core.testMode then
+        self.previewButton.label:SetText("Désactiver l’aperçu"); self.previewButton:SetStyle({ 0.12, 0.46, 0.27, 1 }, COLORS.success)
     else
-        ns.UI:ApplyLayout()
+        self.previewButton.label:SetText("Activer l’aperçu"); self.previewButton:SetStyle({ 0.09, 0.11, 0.15, 1 }, COLORS.border)
     end
 end
 
-function Options:RegisterSetting(key, variableType, label)
-    local setting = Settings.RegisterAddOnSetting(
-        self.category,
-        SETTING_VARIABLES[key],
-        key,
-        DungeonCooldownsDB,
-        variableType,
-        label,
-        ns.defaults[key]
-    )
-
-    setting:SetValueChangedCallback(function()
-        ApplySetting(key)
-    end)
-    self.settings[key] = setting
-    return setting
-end
-
-local function GetSideOptions()
-    local container = Settings.CreateControlTextContainer()
-    container:Add("RIGHT", "À droite")
-    container:Add("LEFT", "À gauche")
-    return container:GetData()
-end
-
-local function GetAlignmentOptions()
-    local container = Settings.CreateControlTextContainer()
-    container:Add("TOP", "Haut")
-    container:Add("CENTER", "Centre")
-    container:Add("BOTTOM", "Bas")
-    return container:GetData()
-end
-
-local function GetBorderOptions()
-    local container = Settings.CreateControlTextContainer()
-    container:Add("CATEGORY", "Couleur de la catégorie")
-    container:Add("DARK", "Bordure sombre")
-    container:Add("NONE", "Aucune bordure")
-    return container:GetData()
-end
-
-local function AddSlider(options, key, label, minimum, maximum, step, description, formatter)
-    local setting = options:RegisterSetting(key, Settings.VarType.Number, label)
-    local sliderOptions = Settings.CreateSliderOptions(minimum, maximum, step)
-    sliderOptions:SetLabelFormatter(MinimalSliderWithSteppersMixin.Label.Right, formatter or tostring)
-    Settings.CreateSlider(options.category, setting, sliderOptions, description)
-end
-
-function Options:RegisterCategory()
-    if not Settings or not Settings.RegisterVerticalLayoutCategory then
-        ns.Print("l’API des options Blizzard n’est pas disponible.")
-        return
+function Options:RefreshControls()
+    if not ns.db then return end
+    for key, control in pairs(self.controls) do
+        local value = ns.db[key]
+        if control.SetDisplayValue then control:SetDisplayValue(value) elseif control.SetValue then control:SetValue(value) end
     end
+    self:RefreshPreviewButton()
+end
 
-    local category, layout = Settings.RegisterVerticalLayoutCategory("Dungeon Cooldowns")
-    self.category = category
-    self.categoryID = category:GetID()
-
-    if CreateSettingsListSectionHeaderInitializer then
-        layout:AddInitializer(CreateSettingsListSectionHeaderInitializer("Activation"))
+function Options:Create()
+    if self.frame then return end
+    local frame = CreateFrame("Frame", "DungeonCooldownsConfig", UIParent, "BackdropTemplate")
+    frame:SetSize(790, 650); frame:SetPoint("CENTER"); frame:SetFrameStrata("DIALOG"); frame:SetClampedToScreen(true)
+    frame:SetMovable(true); frame:EnableMouse(true); frame:RegisterForDrag("LeftButton")
+    frame:SetScript("OnDragStart", frame.StartMoving); frame:SetScript("OnDragStop", frame.StopMovingOrSizing)
+    SetBackdrop(frame, COLORS.panel, { 0.12, 0.52, 0.78, 1 }); self.frame = frame
+    local title = CreateText(frame, "DUNGEON COOLDOWNS", "GameFontNormalLarge", "TOPLEFT", frame, "TOPLEFT", 24, -22)
+    title:SetTextColor(0.35, 0.82, 1, 1)
+    local version = CreateText(frame, "v" .. ns.version, "GameFontHighlightSmall", "LEFT", title, "RIGHT", 10, 0); version:SetTextColor(unpack(COLORS.muted))
+    local subtitle = CreateText(frame, "Configuration", "GameFontHighlightSmall", "TOPLEFT", frame, "TOPLEFT", 24, -45); subtitle:SetTextColor(unpack(COLORS.muted))
+    local close = CreateFrame("Button", nil, frame, "UIPanelCloseButton"); close:SetPoint("TOPRIGHT", -5, -5)
+    local sidebar = CreateFrame("Frame", nil, frame, "BackdropTemplate")
+    sidebar:SetPoint("TOPLEFT", 18, -72); sidebar:SetPoint("BOTTOMLEFT", 18, 62); sidebar:SetWidth(150)
+    SetBackdrop(sidebar, { 0.035, 0.041, 0.055, 1 }, { 0.08, 0.10, 0.13, 1 })
+    local tabs = {{"GENERAL","Général"},{"APPEARANCE","Apparence"},{"SPELLS","Sorts suivis"}}
+    for index, data in ipairs(tabs) do
+        local pageID, pageLabel = data[1], data[2]
+        local button = CreateButton(sidebar, pageLabel, 126, 38, function() Options:SelectPage(pageID) end)
+        button:SetPoint("TOPLEFT", 12, -12 - ((index - 1) * 46)); button.label:ClearAllPoints(); button.label:SetPoint("LEFT", 12, 0); self.tabButtons[pageID] = button
     end
-
-    local enabled = self:RegisterSetting("enabled", Settings.VarType.Boolean, "Activer l’addon")
-    Settings.CreateCheckbox(category, enabled, "Active l’affichage uniquement dans les instances de groupe à cinq joueurs.")
-
-    if CreateSettingsListSectionHeaderInitializer then
-        layout:AddInitializer(CreateSettingsListSectionHeaderInitializer("Affichage"))
-    end
-
-    local defensive = self:RegisterSetting("showDefensive", Settings.VarType.Boolean, "Afficher les défensifs")
-    Settings.CreateCheckbox(category, defensive, "Affiche la ligne bleue des temps de recharge défensifs.")
-
-    local offensive = self:RegisterSetting("showOffensive", Settings.VarType.Boolean, "Afficher les offensifs")
-    Settings.CreateCheckbox(category, offensive, "Affiche la ligne orange des temps de recharge offensifs.")
-
-    local ready = self:RegisterSetting("showReady", Settings.VarType.Boolean, "Afficher aussi les CDs disponibles")
-    Settings.CreateCheckbox(category, ready, "Conserve les icônes visibles quand leur temps de recharge est prêt.")
-
-    local side = self:RegisterSetting("side", Settings.VarType.String, "Position à côté des cadres")
-    Settings.CreateDropdown(category, side, GetSideOptions, "Place les icônes à gauche ou à droite des cadres de groupe Blizzard.")
-
-    local alignment = self:RegisterSetting("alignment", Settings.VarType.String, "Alignement vertical")
-    Settings.CreateDropdown(category, alignment, GetAlignmentOptions, "Aligne le bloc d’icônes en haut, au centre ou en bas de la raid frame.")
-
-    local iconSize = self:RegisterSetting("iconSize", Settings.VarType.Number, "Taille des icônes")
-    local iconSizeOptions = Settings.CreateSliderOptions(14, 36, 1)
-    iconSizeOptions:SetLabelFormatter(MinimalSliderWithSteppersMixin.Label.Right, function(value)
-        return string.format("%d px", value)
-    end)
-    Settings.CreateSlider(category, iconSize, iconSizeOptions, "Définit la largeur et la hauteur de chaque icône.")
-
-    AddSlider(self, "spacing", "Espacement horizontal", 0, 10, 1, "Espace entre deux icônes d’une même ligne.", function(value) return string.format("%d px", value) end)
-    AddSlider(self, "rowSpacing", "Espacement des lignes", 0, 12, 1, "Espace entre la ligne défensive et la ligne offensive.", function(value) return string.format("%d px", value) end)
-    AddSlider(self, "frameGap", "Distance de la raid frame", 0, 30, 1, "Distance entre le bloc de cooldowns et le bord de la raid frame.", function(value) return string.format("%d px", value) end)
-    AddSlider(self, "offsetX", "Décalage horizontal", -100, 100, 1, "Déplace finement le bloc sur l’axe horizontal.", function(value) return string.format("%+d px", value) end)
-    AddSlider(self, "offsetY", "Décalage vertical", -100, 100, 1, "Déplace finement le bloc sur l’axe vertical.", function(value) return string.format("%+d px", value) end)
-    AddSlider(self, "iconAlpha", "Opacité des icônes", 0.30, 1, 0.05, "Règle l’opacité globale des cooldowns.", function(value) return string.format("%d %%", math.floor(value * 100 + 0.5)) end)
-
-    local borderStyle = self:RegisterSetting("borderStyle", Settings.VarType.String, "Style de bordure")
-    Settings.CreateDropdown(category, borderStyle, GetBorderOptions, "Utilise la couleur offensif/défensif, une bordure sombre ou aucune bordure.")
-    AddSlider(self, "borderSize", "Épaisseur de bordure", 1, 4, 1, "Épaisseur du contour des icônes.", function(value) return string.format("%d px", value) end)
-
-    local maxIcons = self:RegisterSetting("maxPerCategory", Settings.VarType.Number, "Icônes maximum par catégorie")
-    local maxIconsOptions = Settings.CreateSliderOptions(1, 8, 1)
-    maxIconsOptions:SetLabelFormatter(MinimalSliderWithSteppersMixin.Label.Right, function(value)
-        return tostring(value)
-    end)
-    Settings.CreateSlider(category, maxIcons, maxIconsOptions, "Limite séparément les défensifs et les offensifs affichés pour chaque joueur.")
-
-    if CreateSettingsListSectionHeaderInitializer and CreateSettingsButtonInitializer then
-        layout:AddInitializer(CreateSettingsListSectionHeaderInitializer("Personnalisation"))
-        local spellButton = CreateSettingsButtonInitializer(
-            "Cooldowns affichés",
-            "Choisir les sorts",
-            function()
-                ns.CooldownSelector:Open()
-            end,
-            "Choisissez précisément les cooldowns offensifs et défensifs à afficher, classe par classe.",
-            true
-        )
-        layout:AddInitializer(spellButton)
-
-        layout:AddInitializer(CreateSettingsListSectionHeaderInitializer("Diagnostic"))
-
-        local testButton = CreateSettingsButtonInitializer(
-            "Aperçu des icônes",
-            "Tester 20 s",
-            function()
-                ns.Core:StartTest()
-            end,
-            "Affiche pendant vingt secondes un exemple directement sur vos cadres de groupe visibles.",
-            true
-        )
-        layout:AddInitializer(testButton)
-
-        local statusButton = CreateSettingsButtonInitializer(
-            "État de l’addon",
-            "Afficher dans le chat",
-            function()
-                ns.Core:PrintStatus()
-            end,
-            "Affiche le contexte actif et le mode de suivi distant utilisé.",
-            true
-        )
-        layout:AddInitializer(statusButton)
-    end
-
-    Settings.RegisterAddOnCategory(category)
+    local reset = CreateButton(sidebar, "Réinitialiser", 126, 32, function() Options:Reset() end); reset:SetPoint("BOTTOMLEFT", 12, 12)
+    local content = CreateFrame("Frame", nil, frame); content:SetPoint("TOPLEFT", sidebar, "TOPRIGHT", 18, 0); content:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -18, 62)
+    self.pages.GENERAL = self:CreateGeneralPage(content); self.pages.APPEARANCE = self:CreateAppearancePage(content); self.pages.SPELLS = self:CreateSpellsPage(content)
+    local preview = CreateButton(frame, "Activer l’aperçu", 190, 36, function() ns.Core:ToggleTest(); Options:RefreshPreviewButton() end)
+    preview:SetPoint("BOTTOMRIGHT", -118, 14); self.previewButton = preview
+    local done = CreateButton(frame, "Fermer", 90, 36, function() frame:Hide() end); done:SetPoint("LEFT", preview, "RIGHT", 8, 0)
+    frame:Hide(); table.insert(UISpecialFrames, frame:GetName()); self:SelectPage(self.activePage)
 end
 
 function Options:Open()
-    if InCombatLockdown() then
-        ns.Print("les options ne peuvent pas être ouvertes en combat.")
-        return
-    end
-    if not self.categoryID then
-        ns.Print("la catégorie d’options n’a pas pu être enregistrée.")
-        return
-    end
-    Settings.OpenToCategory(self.categoryID)
+    if InCombatLockdown() then ns.Print("la configuration ne peut pas être ouverte en combat.") return end
+    self:Create(); self:RefreshControls(); self.frame:Show()
 end
 
 function Options:Reset()
     for key, value in pairs(ns.defaults) do
-        local setting = self.settings[key]
-        if setting then
-            setting:SetValue(value)
-        else
-            if type(value) == "table" then
-                ns.db[key] = {}
-                for childKey, childValue in pairs(value) do
-                    ns.db[key][childKey] = childValue
-                end
-            else
-                ns.db[key] = value
-            end
-        end
+        if type(value) == "table" then ns.db[key] = {}; for childKey, childValue in pairs(value) do ns.db[key][childKey] = childValue end else ns.db[key] = value end
     end
-    ns.UI:ApplyLayout()
-    ns.Core:UpdateActiveState()
-    ns.Print("configuration réinitialisée.")
+    ns.UI:ApplyLayout(); ns.Core:UpdateActiveState(); self:RefreshControls(); ns.Print("configuration réinitialisée.")
 end
 
 function Options:PrintHelp()
-    ns.Print("/dcd — Options > AddOns > Dungeon Cooldowns")
-    ns.Print("/dcd test — aperçu pendant 20 secondes")
-    ns.Print("/dcd status — état et restrictions actives")
+    ns.Print("/dcd — ouvrir l’interface de configuration")
+    ns.Print("/dcd test — activer ou désactiver l’aperçu")
+    ns.Print("/dcd status — état de l’addon")
     ns.Print("/dcd reset — réinitialiser la configuration")
 end
 
 function Options:HandleSlash(message)
     local command = string.lower(strtrim(message or ""))
-    if command == "" or command == "options" then
-        self:Open()
-    elseif command == "test" then
-        ns.Core:StartTest()
-    elseif command == "status" then
-        ns.Core:PrintStatus()
-    elseif command == "reset" then
-        self:Reset()
-    elseif command == "help" then
-        self:PrintHelp()
-    else
-        self:PrintHelp()
-    end
+    if command == "" or command == "options" then self:Open()
+    elseif command == "test" or command == "preview" then ns.Core:ToggleTest()
+    elseif command == "status" then ns.Core:PrintStatus()
+    elseif command == "reset" then self:Reset()
+    else self:PrintHelp() end
 end
 
 function Options:Initialize()
-    self:RegisterCategory()
-
-    SLASH_DUNGEONCOOLDOWNS1 = "/dcd"
-    SLASH_DUNGEONCOOLDOWNS2 = "/dungeoncds"
-    SlashCmdList.DUNGEONCOOLDOWNS = function(message)
-        Options:HandleSlash(message)
-    end
+    SLASH_DUNGEONCOOLDOWNS1 = "/dcd"; SLASH_DUNGEONCOOLDOWNS2 = "/dungeoncds"
+    SlashCmdList.DUNGEONCOOLDOWNS = function(message) Options:HandleSlash(message) end
 end
