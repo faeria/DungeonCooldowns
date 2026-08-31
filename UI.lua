@@ -326,9 +326,10 @@ function UI:ApplyLayout()
 
     local size = ns.db.iconSize
     local spacing = ns.db.spacing
-    local width = (size * ns.db.maxPerCategory) + (spacing * math.max(0, ns.db.maxPerCategory - 1))
-    local visibleRows = (ns.db.showDefensive and 1 or 0) + (ns.db.showOffensive and 1 or 0)
-    local height = math.max(size, (size * visibleRows) + (ns.db.rowSpacing * math.max(0, visibleRows - 1)))
+    local columns = math.max(1, ns.db.iconsPerRow or 5)
+    local rows = math.max(1, ns.db.maxRows or 2)
+    local width = (size * columns) + (spacing * math.max(0, columns - 1))
+    local height = (size * rows) + ((ns.db.rowSpacing or spacing) * math.max(0, rows - 1))
 
     for unitFrame, overlay in pairs(self.overlays) do
         overlay:ClearAllPoints()
@@ -418,24 +419,21 @@ function UI:GetEntries(state, isLocal)
     end
 
     table.sort(entries, function(a, b)
-        if a.data.category ~= b.data.category then
-            return a.data.category == ns.CATEGORY_DEFENSIVE
-        end
         if a.data.priority ~= b.data.priority then
             return a.data.priority < b.data.priority
+        end
+        if a.data.category ~= b.data.category then
+            return a.data.category == ns.CATEGORY_DEFENSIVE
         end
         return a.spellID < b.spellID
     end)
 
     local selected = {}
-    local counts = { OFFENSIVE = 0, DEFENSIVE = 0 }
+    local maximum = math.max(1, ns.db.iconsPerRow or 5) * math.max(1, ns.db.maxRows or 2)
     for _, entry in ipairs(entries) do
-        local category = entry.data.category
-        if counts[category] < ns.db.maxPerCategory then
-            counts[category] = counts[category] + 1
-            entry.categoryIndex = counts[category]
-            selected[#selected + 1] = entry
-        end
+        if #selected >= maximum then break end
+        entry.layoutIndex = #selected + 1
+        selected[#selected + 1] = entry
     end
 
     return selected
@@ -500,12 +498,11 @@ end
 function UI:PositionIcon(icon, entry)
     local size = ns.db.iconSize
     local spacing = ns.db.spacing
-    local bothRows = ns.db.showDefensive and ns.db.showOffensive
-    local row = 0
-    if bothRows and entry.data.category == ns.CATEGORY_OFFENSIVE then
-        row = 1
-    end
-    local x = (entry.categoryIndex - 1) * (size + spacing)
+    local columns = math.max(1, ns.db.iconsPerRow or 5)
+    local index = math.max(0, (entry.layoutIndex or 1) - 1)
+    local column = index % columns
+    local row = math.floor(index / columns)
+    local x = column * (size + spacing)
     local y = row * (size + (ns.db.rowSpacing or spacing))
 
     icon:ClearAllPoints()

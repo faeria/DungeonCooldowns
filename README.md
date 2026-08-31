@@ -6,7 +6,7 @@ Addon WoW Retail 12.1 affichant les principaux temps de recharge défensifs et o
 
 ## Fonctionnalités
 
-- Deux lignes par joueur : défensifs en bleu, offensifs en orange.
+- Grille unique combinant les cooldowns défensifs et offensifs, distingués par une bordure bleue ou orange.
 - Overlays indépendants ancrés aux `CompactPartyFrame`, sans modifier ni contaminer les cadres protégés de Blizzard.
 - État exact du joueur local via `C_Spell.GetSpellCooldown` et `C_Spell.GetSpellCharges`.
 - Filtrage du GCD : seules les véritables recharges des capacités sont dessinées sur les icônes locales.
@@ -15,7 +15,7 @@ Addon WoW Retail 12.1 affichant les principaux temps de recharge défensifs et o
 - Inspection de la spécialisation comme solution de secours pour déterminer les sorts potentiels.
 - Interface de configuration autonome ouverte avec `/dcd`, organisée en pages Général, Apparence et Sorts suivis.
 - Portée configurable entre les donjons à cinq uniquement et le mode solo ou groupe de cinq joueurs.
-- Personnalisation du côté, de l’alignement, des décalages, de la distance à la frame, de la taille, des espacements, de l’opacité, des bordures et du nombre d’icônes.
+- Personnalisation du côté, de l’alignement, des décalages, de la distance à la frame, de la taille, des espacements, de l’opacité, des bordures, du nombre d’icônes par ligne et du nombre de lignes.
 - Sélection précise des cooldowns à afficher, organisée par classe et spécialisation, avec choix individuel et actions « tout sélectionner / tout masquer ».
 - Aperçu réaliste directement sur les cadres Blizzard `CompactPartyFrame` / `CompactRaidFrame` ou sur les party frames EllesmereUI ; une raid frame de secours est utilisée uniquement lorsqu’aucun cadre compatible n’est disponible.
 - Détection continue des cadres Blizzard créés après le chargement de l’addon, y compris les pools dynamiques de raid et de groupe.

@@ -1,7 +1,7 @@
 local addonName, ns = ...
 
 ns.addonName = addonName
-ns.version = "1.4.3"
+ns.version = "1.5.0"
 ns.protocol = 1
 ns.prefix = "DCD5"
 
@@ -31,7 +31,8 @@ ns.defaults = {
     iconAlpha = 1,
     borderStyle = "CATEGORY",
     borderSize = 1,
-    maxPerCategory = 5,
+    iconsPerRow = 5,
+    maxRows = 2,
     disabledSpells = {},
     spellEnabled = {},
 }

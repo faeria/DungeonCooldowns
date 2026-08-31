@@ -546,7 +546,13 @@ end
 
 function Core:Initialize()
     DungeonCooldownsDB = DungeonCooldownsDB or {}
+    local hadGridColumns = DungeonCooldownsDB.iconsPerRow ~= nil
+    local legacyMaxPerCategory = DungeonCooldownsDB.maxPerCategory
     CopyDefaults(DungeonCooldownsDB, ns.defaults)
+    if not hadGridColumns and type(legacyMaxPerCategory) == "number" then
+        DungeonCooldownsDB.iconsPerRow = math.max(1, math.min(10, legacyMaxPerCategory))
+    end
+    DungeonCooldownsDB.maxPerCategory = nil
     ns.db = DungeonCooldownsDB
 
     C_ChatInfo.RegisterAddonMessagePrefix(ns.prefix)

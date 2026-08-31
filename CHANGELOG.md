@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.5.0
+
+- Fusion des cooldowns défensifs et offensifs dans une grille unique.
+- Ajout du réglage du nombre d’icônes par ligne, de 1 à 10.
+- Ajout du réglage du nombre de lignes, de 1 à 5.
+- La bordure bleue ou orange continue d’identifier la catégorie de chaque sort.
+- Migration automatique de l’ancienne limite par catégorie vers la largeur de la grille.
+
 ## 1.4.5
 
 - Suppression du balayage du temps de recharge global sur les icônes locales.

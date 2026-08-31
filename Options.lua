@@ -148,11 +148,12 @@ function Options:CreateGeneralPage(parent)
     self:CreateToggle(activation, "enabled", "Activer Dungeon Cooldowns", "La portée exacte est définie dans le bloc ci-dessous.", 18, -54)
     local scope = CreateCard(page, "Portée", "Détermine où l’affichage réel est activé.", -120, 100)
     self:CreateCycle(scope, "contentMode", "Contenus pris en charge", {{value="DUNGEON",label="Donjons à 5 uniquement"},{value="PARTY",label="Solo ou groupe de 5"}}, 18, -52, 240)
-    local display = CreateCard(page, "Éléments affichés", "Choisissez les informations utiles près des cadres.", -235, 220)
-    self:CreateToggle(display, "showDefensive", "Cooldowns défensifs", "Ligne bleue des capacités défensives.", 18, -52)
-    self:CreateToggle(display, "showOffensive", "Cooldowns offensifs", "Ligne orange des capacités offensives.", 18, -98)
+    local display = CreateCard(page, "Éléments affichés", "Les cooldowns sont réunis dans une grille unique.", -235, 235)
+    self:CreateToggle(display, "showDefensive", "Cooldowns défensifs", "Capacités identifiées par une bordure bleue.", 18, -52)
+    self:CreateToggle(display, "showOffensive", "Cooldowns offensifs", "Capacités identifiées par une bordure orange.", 18, -98)
     self:CreateToggle(display, "showReady", "Afficher les sorts disponibles", "Conserve l’icône lorsqu’un cooldown est prêt.", 18, -144)
-    self:CreateSlider(display, "maxPerCategory", "Icônes maximum par catégorie", 1, 8, 1, 18, -192, 300, tostring)
+    self:CreateSlider(display, "iconsPerRow", "Icônes par ligne", 1, 10, 1, 18, -192, 240, tostring)
+    self:CreateSlider(display, "maxRows", "Nombre de lignes", 1, 5, 1, 300, -192, 240, tostring)
     return page
 end
 
