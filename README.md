@@ -2,7 +2,7 @@
 
 [![Release automatique](https://github.com/faeria/DungeonCooldowns/actions/workflows/release.yml/badge.svg)](https://github.com/faeria/DungeonCooldowns/actions/workflows/release.yml)
 
-Addon WoW Retail 12.1 affichant les principaux temps de recharge défensifs et offensifs à côté des cadres de groupe Blizzard, uniquement dans les instances de type `party` de cinq joueurs maximum.
+Addon WoW Retail 12.1 affichant les principaux temps de recharge défensifs et offensifs à côté des cadres de groupe Blizzard ou EllesmereUI, uniquement dans les instances de type `party` de cinq joueurs maximum.
 
 ## Fonctionnalités
 
@@ -16,7 +16,7 @@ Addon WoW Retail 12.1 affichant les principaux temps de recharge défensifs et o
 - Portée configurable entre les donjons à cinq uniquement et le mode solo ou groupe de cinq joueurs.
 - Personnalisation du côté, de l’alignement, des décalages, de la distance à la frame, de la taille, des espacements, de l’opacité, des bordures et du nombre d’icônes.
 - Sélection précise des cooldowns à afficher, organisée par classe et spécialisation, avec choix individuel et actions « tout sélectionner / tout masquer ».
-- Aperçu réaliste directement sur les cadres `CompactPartyFrame` ou `CompactRaidFrame` visibles ; une raid frame de secours est utilisée uniquement lorsqu’aucun cadre Blizzard n’est disponible.
+- Aperçu réaliste directement sur les cadres Blizzard `CompactPartyFrame` / `CompactRaidFrame` ou sur les party frames EllesmereUI ; une raid frame de secours est utilisée uniquement lorsqu’aucun cadre compatible n’est disponible.
 - Détection continue des cadres Blizzard créés après le chargement de l’addon, y compris les pools dynamiques de raid et de groupe.
 - Aucun framework ni bibliothèque externe.
 
@@ -45,6 +45,12 @@ Chaque push sur `main` déclenche automatiquement une release GitHub. Son tag re
 - `/dcd status` : afficher le contexte et le mode de suivi distant.
 - `/dcd reset` : réinitialiser la configuration.
 - `/dcd help` : afficher l’aide.
+
+## Compatibilité des cadres
+
+- Cadres de groupe Blizzard : détection native.
+- EllesmereUI Raid Frames : intégration directe et sûre, sans scan global ni lecture de valeurs protégées.
+- Les autres addons de cadres nécessitent une intégration dédiée pour rester compatibles avec les valeurs secrètes de Retail 12.1.
 
 ## Limite imposée par Retail 12.1
 

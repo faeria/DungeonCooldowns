@@ -3,6 +3,8 @@ local _, ns = ...
 local UI = {
     overlays = {},
     iconPool = {},
+    frameMetadata = {},
+    currentFrames = {},
     ticker = nil,
 }
 ns.UI = UI
@@ -37,6 +39,9 @@ local function FormatSeconds(seconds)
 end
 
 local function IsGroupUnit(unit)
+    if issecretvalue and issecretvalue(unit) then
+        return false
+    end
     return type(unit) == "string" and (
         unit == "player"
         or string.match(unit, "^party[1-4]$")
@@ -123,6 +128,7 @@ function UI:CreateOverlay(unitFrame)
     overlay:SetFrameStrata(unitFrame:GetFrameStrata() or "MEDIUM")
     overlay:SetFrameLevel(unitFrame:GetFrameLevel() + 20)
     overlay.unitFrame = unitFrame
+    overlay.frameMetadata = self.frameMetadata[unitFrame]
     overlay.lastUnitFrameVisible = false
     overlay.icons = {}
     overlay:Hide()
@@ -176,74 +182,85 @@ end
 
 function UI:GetFrameUnit(frame)
     if not frame then return nil end
+    local metadata = self.frameMetadata[frame]
+    if metadata and metadata.unit then
+        return metadata.unit
+    end
     local unit
     if frame.GetUnit then
         local ok, value = pcall(frame.GetUnit, frame)
-        if ok then unit = value end
+        if ok and not (issecretvalue and issecretvalue(value)) then unit = value end
     end
     if not IsGroupUnit(unit) and frame.GetAttribute then
         local ok, value = pcall(frame.GetAttribute, frame, "unit")
-        if ok then unit = value end
+        if ok and not (issecretvalue and issecretvalue(value)) then unit = value end
     end
     if not IsGroupUnit(unit) then
-        unit = frame.displayedUnit or frame.unit or frame.unitToken
+        unit = frame.displayedUnit
+    end
+    if not IsGroupUnit(unit) then
+        unit = frame.unit
+    end
+    if not IsGroupUnit(unit) then
+        unit = frame.unitToken
     end
     return IsGroupUnit(unit) and unit or nil
 end
 
-function UI:DiscoverGenericUnitFrames(force)
-    if not EnumerateFrames then return end
-    local now = GetTime()
-    if not force and self.nextGenericDiscovery and now < self.nextGenericDiscovery then return end
-    self.nextGenericDiscovery = now + 5
-    self.genericUnitFrames = {}
+function UI:GetEllesmerePartyFrames()
+    local frames = {}
+    local root = _G.EllesmereUI
+    local registry = root and root._ModuleNS
+    if type(registry) ~= "table" then return frames end
 
-    local frame = EnumerateFrames()
-    local inspected = 0
-    while frame and inspected < 20000 do
-        inspected = inspected + 1
-        local forbidden = frame.IsForbidden and frame:IsForbidden()
-        if not forbidden and frame.IsVisible and frame:IsVisible() and frame.GetObjectType and not frame.isDungeonCooldownsTest then
-            local unit = self:GetFrameUnit(frame)
-            if unit then
-                local name = string.lower(frame:GetName() or "")
-                local excluded = string.find(name, "playerframe", 1, true)
-                    or string.find(name, "targetframe", 1, true)
-                    or string.find(name, "focusframe", 1, true)
-                    or string.find(name, "boss", 1, true)
-                    or string.find(name, "nameplate", 1, true)
-                    or string.find(name, "dungeoncooldowns", 1, true)
-                local width, height = frame:GetSize()
-                local hasSecureUnit = false
-                if frame.GetAttribute then
-                    local ok, value = pcall(frame.GetAttribute, frame, "unit")
-                    hasSecureUnit = ok and IsGroupUnit(value)
-                end
-                local namedGroupFrame = string.find(name, "compact", 1, true)
-                    or string.find(name, "party", 1, true)
-                    or string.find(name, "raid", 1, true)
-                    or string.find(name, "group", 1, true)
-                    or string.find(name, "cell", 1, true)
-                    or string.find(name, "grid", 1, true)
-                    or string.find(name, "vuhdo", 1, true)
-                    or string.find(name, "healbot", 1, true)
-                if not excluded and (hasSecureUnit or namedGroupFrame)
-                    and width >= 40 and width <= 500 and height >= 18 and height <= 180 then
-                    self.genericUnitFrames[#self.genericUnitFrames + 1] = frame
-                end
+    local module = registry.EllesmereUIRaidFrames
+    if type(module) ~= "table" or type(module._partyUnitToButton) ~= "table" then
+        module = nil
+        for _, candidate in pairs(registry) do
+            if type(candidate) == "table" and type(candidate._partyUnitToButton) == "table" then
+                module = candidate
+                break
             end
         end
-        frame = EnumerateFrames(frame)
     end
+    if not module then return frames end
+
+    local unitMap = module._partyUnitToButton
+    local units = { "player", "party1", "party2", "party3", "party4", "raid1", "raid2", "raid3", "raid4", "raid5" }
+    for _, unit in ipairs(units) do
+        local frame = unitMap[unit]
+        if frame then
+            frames[#frames + 1] = { frame = frame, unit = unit }
+        end
+    end
+    return frames
+end
+
+function UI:IsUnitFrameVisible(frame)
+    local metadata = self.frameMetadata[frame]
+    if metadata and metadata.assumeVisible then
+        return self.currentFrames[frame] == true
+    end
+    if not frame or not frame.IsVisible then return false end
+    local visible = frame:IsVisible()
+    if issecretvalue and issecretvalue(visible) then return false end
+    return visible == true
 end
 
 function UI:GetUnitFrames()
     local frames = {}
     local seen = {}
-    local function AddFrame(frame)
+    local function AddFrame(frame, unit, assumeVisible, source)
         if frame and not seen[frame] and frame.GetObjectType then
             seen[frame] = true
             frames[#frames + 1] = frame
+            if unit then
+                self.frameMetadata[frame] = {
+                    unit = unit,
+                    assumeVisible = assumeVisible,
+                    source = source,
+                }
+            end
         end
     end
     if CompactPartyFrame and CompactPartyFrame.memberUnitFrames then
@@ -261,8 +278,10 @@ function UI:GetUnitFrames()
     if PartyFrame and PartyFrame.PartyMemberFramePool then
         for frame in PartyFrame.PartyMemberFramePool:EnumerateActive() do AddFrame(frame) end
     end
-    self:DiscoverGenericUnitFrames()
-    for _, frame in ipairs(self.genericUnitFrames or {}) do AddFrame(frame) end
+    for _, entry in ipairs(self:GetEllesmerePartyFrames()) do
+        AddFrame(entry.frame, entry.unit, true, "EllesmereUI")
+    end
+    self.currentFrames = seen
     return frames
 end
 
@@ -286,6 +305,8 @@ function UI:EnsureFrames()
                 self:CreateOverlay(unitFrame)
                 createdAny = true
             end
+        else
+            self.overlays[unitFrame].frameMetadata = self.frameMetadata[unitFrame]
         end
     end
 
@@ -560,7 +581,7 @@ function UI:AssignIcon(icon, entry, state, isLocal)
 end
 
 function UI:RefreshOverlay(unitFrame, overlay)
-    local unitFrameVisible = unitFrame:IsVisible()
+    local unitFrameVisible = self:IsUnitFrameVisible(unitFrame)
     overlay.lastUnitFrameVisible = unitFrameVisible
     if not ns.Core or not ns.Core:IsDisplayActive() or not unitFrameVisible then
         overlay:Hide()
@@ -613,7 +634,7 @@ function UI:RefreshAll()
         local hasVisiblePartyFrame = false
         if ns.Core and ns.Core.testMode then
             for _, frame in ipairs(self:GetUnitFrames()) do
-                if frame:IsVisible() then
+                if self:IsUnitFrameVisible(frame) then
                     hasVisiblePartyFrame = true
                     break
                 end
@@ -647,7 +668,7 @@ function UI:RefreshCooldowns()
     local needsLayoutRefresh = false
     local now = GetTime()
     for unitFrame, overlay in pairs(self.overlays) do
-        local unitFrameVisible = unitFrame:IsVisible()
+        local unitFrameVisible = self:IsUnitFrameVisible(unitFrame)
         if unitFrameVisible ~= overlay.lastUnitFrameVisible then
             self:RefreshOverlay(unitFrame, overlay)
         elseif overlay:IsShown() then

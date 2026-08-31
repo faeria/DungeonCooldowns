@@ -507,14 +507,13 @@ function Core:PrintStatus()
     local visibleFrames = 0
     if ns.UI and ns.UI.GetUnitFrames then
         for _, frame in ipairs(ns.UI:GetUnitFrames()) do
-            if frame:IsVisible() then visibleFrames = visibleFrames + 1 end
+            if ns.UI:IsUnitFrameVisible(frame) then visibleFrames = visibleFrames + 1 end
         end
     end
     ns.Print(mode .. " — portée : " .. scope .. " — " .. knownCount .. " CDs locaux — " .. visibleFrames .. " frame(s) visible(s).")
 end
 
 function Core:PrintDetectedFrames()
-    ns.UI:DiscoverGenericUnitFrames(true)
     local frames = ns.UI:GetUnitFrames()
     ns.Print(#frames .. " frame(s) d’unité détectée(s) :")
     for index, frame in ipairs(frames) do

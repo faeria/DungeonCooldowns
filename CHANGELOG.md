@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.4.4
+
+- Suppression du scan global `EnumerateFrames`, incompatible avec les booléens secrets de Retail 12.1.
+- Intégration directe des party frames EllesmereUI via leur table unité-bouton.
+- Aucune lecture de visibilité ou d’attribut sécurisé n’est effectuée sur les cadres EllesmereUI.
+- Le diagnostic `/dcd status` utilise désormais la même détection sûre que l’affichage.
+
 ## 1.4.3
 
 - Ajout d’une découverte générique des boutons d’unité visibles via `EnumerateFrames`.
