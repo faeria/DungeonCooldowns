@@ -482,6 +482,7 @@ function Core:StartTest()
     ns.UI:EnsureFrames()
     ns.UI:RefreshAll()
     if ns.Options then ns.Options:RefreshPreviewButton() end
+    if ns.CooldownSelector then ns.CooldownSelector:RefreshPreviewButton() end
     ns.Print("aperçu activé sur vos cadres de groupe.")
 end
 
@@ -492,6 +493,7 @@ function Core:StopTest()
     self.testMode = false
     ns.UI:RefreshAll()
     if ns.Options then ns.Options:RefreshPreviewButton() end
+    if ns.CooldownSelector then ns.CooldownSelector:RefreshPreviewButton() end
     ns.Print("aperçu désactivé.")
 end
 

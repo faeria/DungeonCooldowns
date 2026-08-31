@@ -4,10 +4,11 @@ local Options = { controls = {}, pages = {}, tabButtons = {}, activePage = "GENE
 ns.Options = Options
 
 local COLORS = {
-    panel = { 0.025, 0.030, 0.042, 0.99 }, card = { 0.055, 0.065, 0.085, 0.96 },
-    border = { 0.18, 0.22, 0.29, 1 }, accent = { 0.10, 0.62, 0.92, 1 },
+    panel = { 0.018, 0.023, 0.032, 0.99 }, card = { 0.045, 0.055, 0.072, 0.98 },
+    surface = { 0.032, 0.039, 0.052, 1 }, footer = { 0.024, 0.030, 0.041, 1 },
+    border = { 0.14, 0.18, 0.24, 1 }, accent = { 0.08, 0.66, 0.94, 1 },
     accentHover = { 0.16, 0.72, 1.00, 1 }, muted = { 0.62, 0.67, 0.74 },
-    success = { 0.16, 0.78, 0.42, 1 },
+    success = { 0.13, 0.72, 0.40, 1 }, danger = { 0.82, 0.20, 0.24, 1 },
 }
 
 local function SetBackdrop(frame, background, border)
@@ -26,8 +27,8 @@ end
 local function CreateButton(parent, text, width, height, callback)
     local button = CreateFrame("Button", nil, parent, "BackdropTemplate")
     button:SetSize(width or 150, height or 32)
-    SetBackdrop(button, { 0.09, 0.11, 0.15, 1 }, COLORS.border)
-    button.normalBackground = { 0.09, 0.11, 0.15, 1 }
+    SetBackdrop(button, { 0.065, 0.080, 0.105, 1 }, COLORS.border)
+    button.normalBackground = { 0.065, 0.080, 0.105, 1 }
     button.normalBorder = { unpack(COLORS.border) }
     function button:SetStyle(background, border)
         self.normalBackground = { unpack(background) }
@@ -35,7 +36,7 @@ local function CreateButton(parent, text, width, height, callback)
         self:SetBackdropColor(unpack(self.normalBackground))
         self:SetBackdropBorderColor(unpack(self.normalBorder))
     end
-    button.label = CreateText(button, text, "GameFontHighlight", "CENTER")
+    button.label = CreateText(button, text, "GameFontHighlightSmall", "CENTER")
     button:SetScript("OnEnter", function(self)
         self:SetBackdropColor(0.14, 0.18, 0.24, 1)
         self:SetBackdropBorderColor(unpack(COLORS.accentHover))
@@ -48,13 +49,34 @@ local function CreateButton(parent, text, width, height, callback)
     return button
 end
 
+local function CreateCloseButton(parent)
+    local button = CreateButton(parent, "×", 28, 28, function(self) self:GetParent():Hide() end)
+    button:SetPoint("TOPRIGHT", -14, -14)
+    button.label:SetFontObject(GameFontNormalLarge)
+    button:SetScript("OnEnter", function(self)
+        self:SetBackdropColor(0.42, 0.07, 0.09, 1)
+        self:SetBackdropBorderColor(unpack(COLORS.danger))
+    end)
+    button:SetScript("OnLeave", function(self)
+        self:SetBackdropColor(unpack(self.normalBackground))
+        self:SetBackdropBorderColor(unpack(self.normalBorder))
+    end)
+    return button
+end
+
 local function CreateCard(parent, title, description, top, height)
     local card = CreateFrame("Frame", nil, parent, "BackdropTemplate")
     card:SetPoint("TOPLEFT", 0, top)
     card:SetPoint("TOPRIGHT", 0, top)
     card:SetHeight(height)
     SetBackdrop(card)
-    CreateText(card, title, "GameFontNormalLarge", "TOPLEFT", card, "TOPLEFT", 18, -15)
+    local marker = card:CreateTexture(nil, "ARTWORK")
+    marker:SetColorTexture(unpack(COLORS.accent))
+    marker:SetPoint("TOPLEFT", 0, 0)
+    marker:SetPoint("BOTTOMLEFT", 0, 0)
+    marker:SetWidth(3)
+    local titleText = CreateText(card, title, "GameFontNormalLarge", "TOPLEFT", card, "TOPLEFT", 18, -15)
+    titleText:SetTextColor(0.88, 0.93, 0.98)
     if description then
         local info = CreateText(card, description, "GameFontHighlightSmall", "TOPLEFT", card, "TOPLEFT", 18, -39)
         info:SetTextColor(unpack(COLORS.muted))
@@ -144,46 +166,48 @@ end
 
 function Options:CreateGeneralPage(parent)
     local page = CreateFrame("Frame", nil, parent); page:SetAllPoints()
-    local activation = CreateCard(page, "Activation", "Contrôle global de Dungeon Cooldowns.", 0, 105)
-    self:CreateToggle(activation, "enabled", "Activer Dungeon Cooldowns", "La portée exacte est définie dans le bloc ci-dessous.", 18, -54)
-    local scope = CreateCard(page, "Portée", "Détermine où l’affichage réel est activé.", -120, 100)
-    self:CreateCycle(scope, "contentMode", "Contenus pris en charge", {{value="DUNGEON",label="Donjons à 5 uniquement"},{value="PARTY",label="Solo ou groupe de 5"}}, 18, -52, 240)
-    local display = CreateCard(page, "Éléments affichés", "Les cooldowns sont réunis dans une grille unique.", -235, 235)
-    self:CreateToggle(display, "showDefensive", "Cooldowns défensifs", "Capacités identifiées par une bordure bleue.", 18, -52)
-    self:CreateToggle(display, "showOffensive", "Cooldowns offensifs", "Capacités identifiées par une bordure orange.", 18, -98)
-    self:CreateToggle(display, "showReady", "Afficher les sorts disponibles", "Conserve l’icône lorsqu’un cooldown est prêt.", 18, -144)
-    self:CreateSlider(display, "iconsPerRow", "Icônes par ligne", 1, 10, 1, 18, -192, 240, tostring)
-    self:CreateSlider(display, "maxRows", "Nombre de lignes", 1, 5, 1, 300, -192, 240, tostring)
+    local activation = CreateCard(page, "Activation", "Contrôle global de l’addon.", 0, 98)
+    self:CreateToggle(activation, "enabled", "Activer Dungeon Cooldowns", "Active l’affichage selon la portée choisie.", 18, -48)
+    local scope = CreateCard(page, "Portée", "Détermine où l’affichage réel est actif.", -108, 96)
+    self:CreateCycle(scope, "contentMode", "Contenus pris en charge", {{value="DUNGEON",label="Donjons à 5 uniquement"},{value="PARTY",label="Solo ou groupe de 5"}}, 18, -42, 240)
+    local display = CreateCard(page, "Affichage", "Cooldowns réunis dans une grille unique.", -214, 220)
+    self:CreateToggle(display, "showDefensive", "Cooldowns défensifs", "Bordure bleue.", 18, -48)
+    self:CreateToggle(display, "showOffensive", "Cooldowns offensifs", "Bordure orange.", 18, -88)
+    self:CreateToggle(display, "showReady", "Afficher les sorts disponibles", "Conserve les icônes prêtes.", 18, -128)
+    self:CreateSlider(display, "iconsPerRow", "Icônes par ligne", 1, 10, 1, 18, -174, 240, tostring)
+    self:CreateSlider(display, "maxRows", "Nombre de lignes", 1, 5, 1, 304, -174, 240, tostring)
     return page
 end
 
 function Options:CreateAppearancePage(parent)
     local page = CreateFrame("Frame", nil, parent); page:SetAllPoints()
-    local placement = CreateCard(page, "Position", "Placement précis par rapport à chaque raid frame.", 0, 205)
-    self:CreateCycle(placement, "side", "Côté", {{value="LEFT",label="À gauche"},{value="RIGHT",label="À droite"}}, 18, -58, 180)
-    self:CreateCycle(placement, "alignment", "Alignement vertical", {{value="TOP",label="Haut"},{value="CENTER",label="Centre"},{value="BOTTOM",label="Bas"}}, 220, -58, 180)
-    self:CreateSlider(placement, "frameGap", "Distance de la frame", 0, 30, 1, 18, -122, 180, function(v) return string.format("%d px", v) end)
-    self:CreateSlider(placement, "offsetX", "Décalage horizontal", -100, 100, 1, 220, -122, 180, function(v) return string.format("%+d px", v) end)
-    self:CreateSlider(placement, "offsetY", "Décalage vertical", -100, 100, 1, 422, -122, 150, function(v) return string.format("%+d px", v) end)
-    local icons = CreateCard(page, "Icônes", "Dimensions, densité et apparence des cooldowns.", -220, 250)
-    self:CreateSlider(icons, "iconSize", "Taille", 14, 40, 1, 18, -60, 180, function(v) return string.format("%d px", v) end)
-    self:CreateSlider(icons, "spacing", "Espacement horizontal", 0, 10, 1, 220, -60, 180, function(v) return string.format("%d px", v) end)
-    self:CreateSlider(icons, "rowSpacing", "Espacement des lignes", 0, 12, 1, 422, -60, 150, function(v) return string.format("%d px", v) end)
-    self:CreateSlider(icons, "iconAlpha", "Opacité", 0.30, 1, 0.05, 18, -130, 180, function(v) return string.format("%d %%", math.floor(v * 100 + 0.5)) end)
-    self:CreateCycle(icons, "borderStyle", "Style de bordure", {{value="CATEGORY",label="Couleur de catégorie"},{value="DARK",label="Sombre"},{value="NONE",label="Aucune"}}, 220, -130, 180)
-    self:CreateSlider(icons, "borderSize", "Épaisseur de bordure", 1, 4, 1, 422, -130, 150, function(v) return string.format("%d px", v) end)
-    local tip = CreateText(icons, "Activez l’aperçu en bas : chaque modification est visible immédiatement.", "GameFontHighlightSmall", "BOTTOMLEFT", icons, "BOTTOMLEFT", 18, 20)
+    local placement = CreateCard(page, "Position", "Placement précis autour des cadres de groupe.", 0, 186)
+    self:CreateCycle(placement, "side", "Côté", {{value="LEFT",label="À gauche"},{value="RIGHT",label="À droite"}}, 18, -50, 240)
+    self:CreateCycle(placement, "alignment", "Alignement vertical", {{value="TOP",label="Haut"},{value="CENTER",label="Centre"},{value="BOTTOM",label="Bas"}}, 304, -50, 240)
+    self:CreateSlider(placement, "frameGap", "Distance", 0, 30, 1, 18, -116, 160, function(v) return string.format("%d px", v) end)
+    self:CreateSlider(placement, "offsetX", "Décalage X", -100, 100, 1, 202, -116, 160, function(v) return string.format("%+d px", v) end)
+    self:CreateSlider(placement, "offsetY", "Décalage Y", -100, 100, 1, 386, -116, 158, function(v) return string.format("%+d px", v) end)
+    local icons = CreateCard(page, "Style des icônes", "Dimensions, espacements et bordures.", -196, 232)
+    self:CreateSlider(icons, "iconSize", "Taille", 14, 40, 1, 18, -52, 160, function(v) return string.format("%d px", v) end)
+    self:CreateSlider(icons, "spacing", "Espacement X", 0, 10, 1, 202, -52, 160, function(v) return string.format("%d px", v) end)
+    self:CreateSlider(icons, "rowSpacing", "Espacement Y", 0, 12, 1, 386, -52, 158, function(v) return string.format("%d px", v) end)
+    self:CreateSlider(icons, "iconAlpha", "Opacité", 0.30, 1, 0.05, 18, -120, 160, function(v) return string.format("%d %%", math.floor(v * 100 + 0.5)) end)
+    self:CreateCycle(icons, "borderStyle", "Style de bordure", {{value="CATEGORY",label="Couleur de catégorie"},{value="DARK",label="Sombre"},{value="NONE",label="Aucune"}}, 202, -120, 160)
+    self:CreateSlider(icons, "borderSize", "Épaisseur", 1, 4, 1, 386, -120, 158, function(v) return string.format("%d px", v) end)
+    local tip = CreateText(icons, "Chaque modification est appliquée instantanément à l’aperçu.", "GameFontHighlightSmall", "BOTTOMLEFT", icons, "BOTTOMLEFT", 18, 16)
     tip:SetTextColor(unpack(COLORS.muted))
     return page
 end
 
 function Options:CreateSpellsPage(parent)
     local page = CreateFrame("Frame", nil, parent); page:SetAllPoints()
-    local card = CreateCard(page, "Cooldowns suivis", "Sélection individuelle par classe et spécialisation.", 0, 190)
+    local card = CreateCard(page, "Cooldowns suivis", "Sélection individuelle par classe et spécialisation.", 0, 220)
     local text = CreateText(card, "La sélection s’applique à votre personnage et à tous les membres du groupe. Les sorts masqués ne consomment aucune place dans l’affichage.", "GameFontHighlight", "TOPLEFT", card, "TOPLEFT", 18, -62)
     text:SetWidth(520); text:SetJustifyH("LEFT")
-    local open = CreateButton(card, "Ouvrir le sélecteur de sorts", 240, 36, function() ns.CooldownSelector:Open() end)
-    open:SetPoint("BOTTOMLEFT", 18, 20)
+    local detail = CreateText(card, "13 classes  •  40 spécialisations  •  Choix sauvegardés automatiquement", "GameFontHighlightSmall", "TOPLEFT", card, "TOPLEFT", 18, -108)
+    detail:SetTextColor(0.35, 0.82, 1)
+    local open = CreateButton(card, "Configurer les sorts", 220, 36, function() ns.CooldownSelector:Open() end)
+    open:SetPoint("BOTTOMLEFT", 18, 22)
     return page
 end
 
@@ -193,8 +217,10 @@ function Options:SelectPage(pageID)
     for id, button in pairs(self.tabButtons) do
         if id == pageID then
             button:SetStyle({ 0.08, 0.32, 0.49, 1 }, COLORS.accent); button.label:SetTextColor(0.75, 0.93, 1, 1)
+            if button.selectionBar then button.selectionBar:Show() end
         else
             button:SetStyle({ 0.045, 0.052, 0.068, 1 }, { 0.09, 0.11, 0.15, 1 }); button.label:SetTextColor(0.72, 0.75, 0.80, 1)
+            if button.selectionBar then button.selectionBar:Hide() end
         end
     end
 end
@@ -220,29 +246,33 @@ end
 function Options:Create()
     if self.frame then return end
     local frame = CreateFrame("Frame", "DungeonCooldownsConfig", UIParent, "BackdropTemplate")
-    frame:SetSize(790, 650); frame:SetPoint("CENTER"); frame:SetFrameStrata("DIALOG"); frame:SetClampedToScreen(true)
+    frame:SetSize(760, 560); frame:SetPoint("CENTER"); frame:SetFrameStrata("DIALOG"); frame:SetClampedToScreen(true)
     frame:SetMovable(true); frame:EnableMouse(true); frame:RegisterForDrag("LeftButton")
     frame:SetScript("OnDragStart", frame.StartMoving); frame:SetScript("OnDragStop", frame.StopMovingOrSizing)
-    SetBackdrop(frame, COLORS.panel, { 0.12, 0.52, 0.78, 1 }); self.frame = frame
-    local title = CreateText(frame, "DUNGEON COOLDOWNS", "GameFontNormalLarge", "TOPLEFT", frame, "TOPLEFT", 24, -22)
+    SetBackdrop(frame, COLORS.panel, { 0.08, 0.48, 0.70, 1 }); self.frame = frame
+    local topLine = frame:CreateTexture(nil, "OVERLAY"); topLine:SetColorTexture(unpack(COLORS.accent)); topLine:SetPoint("TOPLEFT", 1, -1); topLine:SetPoint("TOPRIGHT", -1, -1); topLine:SetHeight(3)
+    local title = CreateText(frame, "DUNGEON COOLDOWNS", "GameFontNormalLarge", "TOPLEFT", frame, "TOPLEFT", 22, -19)
     title:SetTextColor(0.35, 0.82, 1, 1)
     local version = CreateText(frame, "v" .. ns.version, "GameFontHighlightSmall", "LEFT", title, "RIGHT", 10, 0); version:SetTextColor(unpack(COLORS.muted))
-    local subtitle = CreateText(frame, "Configuration", "GameFontHighlightSmall", "TOPLEFT", frame, "TOPLEFT", 24, -45); subtitle:SetTextColor(unpack(COLORS.muted))
-    local close = CreateFrame("Button", nil, frame, "UIPanelCloseButton"); close:SetPoint("TOPRIGHT", -5, -5)
+    local subtitle = CreateText(frame, "Configuration des cadres de groupe", "GameFontHighlightSmall", "TOPLEFT", frame, "TOPLEFT", 22, -41); subtitle:SetTextColor(unpack(COLORS.muted))
+    CreateCloseButton(frame)
     local sidebar = CreateFrame("Frame", nil, frame, "BackdropTemplate")
-    sidebar:SetPoint("TOPLEFT", 18, -72); sidebar:SetPoint("BOTTOMLEFT", 18, 62); sidebar:SetWidth(150)
-    SetBackdrop(sidebar, { 0.035, 0.041, 0.055, 1 }, { 0.08, 0.10, 0.13, 1 })
+    sidebar:SetPoint("TOPLEFT", 18, -68); sidebar:SetPoint("BOTTOMLEFT", 18, 58); sidebar:SetWidth(140)
+    SetBackdrop(sidebar, COLORS.surface, { 0.07, 0.09, 0.12, 1 })
     local tabs = {{"GENERAL","Général"},{"APPEARANCE","Apparence"},{"SPELLS","Sorts suivis"}}
     for index, data in ipairs(tabs) do
         local pageID, pageLabel = data[1], data[2]
-        local button = CreateButton(sidebar, pageLabel, 126, 38, function() Options:SelectPage(pageID) end)
-        button:SetPoint("TOPLEFT", 12, -12 - ((index - 1) * 46)); button.label:ClearAllPoints(); button.label:SetPoint("LEFT", 12, 0); self.tabButtons[pageID] = button
+        local button = CreateButton(sidebar, pageLabel, 116, 38, function() Options:SelectPage(pageID) end)
+        button:SetPoint("TOPLEFT", 12, -12 - ((index - 1) * 46)); button.label:ClearAllPoints(); button.label:SetPoint("LEFT", 16, 0)
+        button.selectionBar = button:CreateTexture(nil, "OVERLAY"); button.selectionBar:SetColorTexture(unpack(COLORS.accent)); button.selectionBar:SetPoint("TOPLEFT", 0, 0); button.selectionBar:SetPoint("BOTTOMLEFT", 0, 0); button.selectionBar:SetWidth(3); button.selectionBar:Hide()
+        self.tabButtons[pageID] = button
     end
-    local reset = CreateButton(sidebar, "Réinitialiser", 126, 32, function() Options:Reset() end); reset:SetPoint("BOTTOMLEFT", 12, 12)
-    local content = CreateFrame("Frame", nil, frame); content:SetPoint("TOPLEFT", sidebar, "TOPRIGHT", 18, 0); content:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -18, 62)
+    local reset = CreateButton(sidebar, "Réinitialiser", 116, 32, function() Options:Reset() end); reset:SetPoint("BOTTOMLEFT", 12, 12)
+    local content = CreateFrame("Frame", nil, frame); content:SetPoint("TOPLEFT", sidebar, "TOPRIGHT", 16, 0); content:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -18, 58)
     self.pages.GENERAL = self:CreateGeneralPage(content); self.pages.APPEARANCE = self:CreateAppearancePage(content); self.pages.SPELLS = self:CreateSpellsPage(content)
+    local footer = CreateFrame("Frame", nil, frame, "BackdropTemplate"); footer:SetPoint("BOTTOMLEFT", 1, 1); footer:SetPoint("BOTTOMRIGHT", -1, 1); footer:SetHeight(50); SetBackdrop(footer, COLORS.footer, { 0.07, 0.09, 0.12, 1 })
     local preview = CreateButton(frame, "Activer l’aperçu", 190, 36, function() ns.Core:ToggleTest(); Options:RefreshPreviewButton() end)
-    preview:SetPoint("BOTTOMRIGHT", -118, 14); self.previewButton = preview
+    preview:SetPoint("BOTTOMRIGHT", -116, 8); self.previewButton = preview
     local done = CreateButton(frame, "Fermer", 90, 36, function() frame:Hide() end); done:SetPoint("LEFT", preview, "RIGHT", 8, 0)
     frame:Hide(); table.insert(UISpecialFrames, frame:GetName()); self:SelectPage(self.activePage)
 end

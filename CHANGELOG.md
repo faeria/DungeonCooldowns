@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.6.0
+
+- Refonte visuelle compacte de la fenêtre de configuration et du sélecteur de sorts.
+- Suppression de la superposition des deux fenêtres : le sélecteur remplace temporairement la configuration puis y revient.
+- Nouvelle hiérarchie visuelle avec barre d’accent, cartes plus lisibles, navigation active et pied de page cohérent.
+- Sélecteur enrichi avec compteur de sorts, catégories colorées, cases personnalisées et liste mieux dimensionnée.
+- Réduction de l’espace vide et réorganisation complète des réglages Général et Apparence.
+
 ## 1.5.0
 
 - Fusion des cooldowns défensifs et offensifs dans une grille unique.
