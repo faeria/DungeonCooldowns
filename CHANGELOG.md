@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.6.2
+
+- Détection explicite du verrouillage des messages addon imposé par WoW pendant les clés Mythique+.
+- Les cooldowns distants impossibles à suivre en direct sont désormais affichés comme inconnus au lieu d’être annoncés prêts.
+- Arrêt des tentatives périodiques inutiles pendant le verrouillage et reprise automatique de la synchronisation à sa sortie.
+- Diagnostics `/dcd status` et `/dcd sync` corrigés pour afficher le refus réel de Blizzard.
+- Ajout d’un harnais de régression couvrant le verrouillage, la reprise, la fraîcheur des pairs et le rendu distant.
+
 ## 1.6.1
 
 - Priorité systématique à `INSTANCE_CHAT` lorsqu’un groupe d’instance existe, même en présence d’un groupe principal.

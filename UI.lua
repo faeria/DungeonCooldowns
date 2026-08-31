@@ -70,6 +70,15 @@ local function OnIconEnter(icon)
 
     if icon.isLocal then
         GameTooltip:AddLine("État exact fourni par WoW", 0.35, 1.0, 0.45)
+    elseif icon.remoteTrackingAvailable == false then
+        if icon.remoteTrackingReason == "lockdown" then
+            GameTooltip:AddLine("État distant inconnu", 1.0, 0.82, 0.25)
+            GameTooltip:AddLine("WoW bloque la communication entre addons pendant la clé Mythique+.", 0.9, 0.9, 0.9, true)
+        elseif icon.remoteTrackingReason == "stale" then
+            GameTooltip:AddLine("Synchronisation distante périmée", 1.0, 0.82, 0.25)
+        else
+            GameTooltip:AddLine("Aucune synchronisation distante en direct", 1.0, 0.82, 0.25)
+        end
     elseif icon.source == "synced" then
         GameTooltip:AddLine("Sort confirmé par Dungeon Cooldowns", 0.35, 1.0, 0.45)
         GameTooltip:AddLine("Durée distante estimée", 1.0, 0.82, 0.25)
@@ -79,7 +88,8 @@ local function OnIconEnter(icon)
         GameTooltip:AddLine("Utilisation observée — estimation", 1.0, 0.82, 0.25)
     end
 
-    if icon.timer and icon.timer.expires and icon.timer.expires > GetTime() then
+    if icon.remoteTrackingAvailable ~= false
+        and icon.timer and icon.timer.expires and icon.timer.expires > GetTime() then
         GameTooltip:AddLine("Recharge estimée : " .. FormatSeconds(icon.timer.expires - GetTime()), 0.9, 0.9, 0.9)
     end
 
@@ -109,6 +119,12 @@ local function CreateIcon(parent)
     icon.ready:SetColorTexture(unpack(ns.colors.READY))
     icon.ready:SetSize(4, 4)
     icon.ready:SetPoint("TOPRIGHT", -2, -2)
+
+    icon.unknown = icon:CreateFontString(nil, "OVERLAY", "NumberFontNormalSmall")
+    icon.unknown:SetPoint("CENTER", 0, 0)
+    icon.unknown:SetText("?")
+    icon.unknown:SetTextColor(1.0, 0.82, 0.25, 1)
+    icon.unknown:Hide()
 
     icon.charges = icon:CreateFontString(nil, "OVERLAY", "NumberFontNormalSmall")
     icon.charges:SetPoint("BOTTOMRIGHT", -1, 1)
@@ -370,7 +386,7 @@ local function IsLocalSpellOnCooldown(spellID)
     return info and info.isActive and not info.isOnGCD
 end
 
-function UI:ShouldIncludeSpell(spellID, data, isLocal, timer)
+function UI:ShouldIncludeSpell(spellID, data, isLocal, timer, remoteTrackingAvailable)
     if not ns.IsSpellEnabled(spellID) then
         return false
     end
@@ -379,6 +395,9 @@ function UI:ShouldIncludeSpell(spellID, data, isLocal, timer)
     end
     if data.category == ns.CATEGORY_DEFENSIVE and not ns.db.showDefensive then
         return false
+    end
+    if not isLocal and remoteTrackingAvailable == false then
+        return true
     end
     if ns.db.showReady then
         return true
@@ -401,13 +420,15 @@ function UI:GetEntries(state, isLocal)
     local entries = {}
     local seenGroups = {}
     local known = state and state.known or {}
+    local remoteTrackingAvailable = isLocal
+        or (ns.Core and ns.Core:IsRemoteTrackingAvailable(state))
 
     for _, spellID in ipairs(known) do
         local data, canonicalID = ns.GetSpellData(spellID)
         if data then
             local timer = state.timers and (state.timers[spellID] or state.timers[canonicalID] or state.timers[data.group])
             local group = data.group or canonicalID
-            if not seenGroups[group] and self:ShouldIncludeSpell(spellID, data, isLocal, timer) then
+            if not seenGroups[group] and self:ShouldIncludeSpell(spellID, data, isLocal, timer, remoteTrackingAvailable) then
                 seenGroups[group] = true
                 entries[#entries + 1] = {
                     spellID = spellID,
@@ -514,6 +535,7 @@ function UI:PositionIcon(icon, entry)
 end
 
 function UI:RefreshLocalIcon(icon)
+    if icon.unknown then icon.unknown:Hide() end
     local cooldownInfo
     local cooldownDuration
     if C_Spell.GetSpellCooldownDuration and icon.cooldown.SetCooldownFromDurationObject then
@@ -555,6 +577,16 @@ function UI:RefreshLocalIcon(icon)
 end
 
 function UI:RefreshRemoteIcon(icon)
+    icon.unknown:Hide()
+    if icon.remoteTrackingAvailable == false then
+        icon.cooldown:Clear()
+        icon.texture:SetDesaturated(true)
+        icon.ready:Hide()
+        icon.unknown:Show()
+        icon.charges:SetText("")
+        return
+    end
+
     local timer = icon.timer
     if timer and timer.expires and timer.expires > GetTime() then
         icon.cooldown:SetCooldown(timer.start, timer.duration, 1)
@@ -568,11 +600,25 @@ function UI:RefreshRemoteIcon(icon)
     icon.charges:SetText("")
 end
 
+function UI:RefreshRemoteTrackingState(icon, state)
+    if state then
+        icon.state = state
+    end
+    if icon.isLocal or (ns.Core and ns.Core.testMode) then
+        icon.remoteTrackingAvailable = true
+        icon.remoteTrackingReason = nil
+        return
+    end
+    icon.remoteTrackingAvailable = ns.Core and ns.Core:IsRemoteTrackingAvailable(icon.state) or false
+    icon.remoteTrackingReason = ns.Core and ns.Core:GetRemoteTrackingReason(icon.state) or "unavailable"
+end
+
 function UI:AssignIcon(icon, entry, state, isLocal)
     icon.spellID = entry.spellID
     icon.timer = entry.timer
     icon.isLocal = isLocal
     icon.source = state and state.source
+    self:RefreshRemoteTrackingState(icon, state)
     icon.texture:SetTexture(GetSpellTexture(entry.spellID))
 
     local color = ns.colors[entry.data.category]
@@ -583,7 +629,7 @@ function UI:AssignIcon(icon, entry, state, isLocal)
     else
         icon:SetBackdropBorderColor(color[1], color[2], color[3], 1)
     end
-    local sourceAlpha = (isLocal or icon.source == "synced") and 1 or 0.82
+    local sourceAlpha = (isLocal or icon.remoteTrackingAvailable) and 1 or 0.82
     icon:SetAlpha(sourceAlpha * (ns.db.iconAlpha or 1))
 
     if isLocal then
@@ -683,9 +729,15 @@ function UI:RefreshCooldowns()
 
     local needsLayoutRefresh = false
     local now = GetTime()
+    local refreshHiddenOverlays = not self.nextHiddenOverlayRefresh or now >= self.nextHiddenOverlayRefresh
+    if refreshHiddenOverlays then
+        self.nextHiddenOverlayRefresh = now + 1
+    end
     for unitFrame, overlay in pairs(self.overlays) do
         local unitFrameVisible = self:IsUnitFrameVisible(unitFrame)
         if unitFrameVisible ~= overlay.lastUnitFrameVisible then
+            self:RefreshOverlay(unitFrame, overlay)
+        elseif refreshHiddenOverlays and unitFrameVisible and not overlay:IsShown() then
             self:RefreshOverlay(unitFrame, overlay)
         elseif overlay:IsShown() then
             for _, icon in ipairs(overlay.icons) do
@@ -694,6 +746,7 @@ function UI:RefreshCooldowns()
                         self:RefreshLocalIcon(icon)
                     else
                         local expired = icon.timer and icon.timer.expires and icon.timer.expires <= now
+                        self:RefreshRemoteTrackingState(icon)
                         self:RefreshRemoteIcon(icon)
                         if expired and not ns.db.showReady then
                             needsLayoutRefresh = true

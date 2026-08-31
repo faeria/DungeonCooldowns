@@ -31,7 +31,9 @@ La documentation 12.1 déclare :
 - le journal de combat comme système restreignable via `C_CombatLog.IsCombatLogRestricted()` ;
 - les messages addon comme refusant les arguments secrets.
 
-Le diffuseur Blizzard utilise `C_Commentator.SendAddonMessage`, API réservée aux royaumes de tournoi et aux commentateurs. Dungeon Cooldowns n’essaie pas de l’appeler. Il transmet uniquement des données non protégées concernant le joueur local avec `C_ChatInfo.SendAddonMessage` : sorts connus et identifiant d’un sort que le joueur vient lui-même d’utiliser.
+Le diffuseur Blizzard utilise `C_Commentator.SendAddonMessage`, API réservée aux royaumes de tournoi et aux commentateurs. Dungeon Cooldowns n’essaie pas de l’appeler. Hors verrouillage, il transmet uniquement des données non protégées concernant le joueur local avec `C_ChatInfo.SendAddonMessage` : sorts connus et identifiant d’un sort que le joueur vient lui-même d’utiliser.
+
+En rencontre, mode défi, match JcJ ou carte à communication restreinte, `C_ChatInfo.InChatMessagingLockdown()` indique que les restrictions sont actives. Sur les royaumes normaux, `C_ChatInfo.AreOutgoingAddonChatMessagesRestricted()` confirme que les addons tiers ne peuvent pas émettre et `C_ChatInfo.SendAddonMessage()` renvoie `Enum.SendAddonMessageResult.AddOnMessageLockdown`. La nature non secrète du payload ne contourne pas ce verrouillage global du transport. Dungeon Cooldowns conserve alors les sorts distants découverts auparavant, mais marque leur état comme inconnu et reprend la synchronisation lorsque les émissions redeviennent autorisées.
 
 `COMBAT_LOG_EVENT_UNFILTERED` est déclaré avec `HasRestrictions = true` dans `CombatLogDocumentation.lua`. Son inscription avec `Frame:RegisterEvent` est interdite aux addons tiers en Retail 12.1 ; Dungeon Cooldowns ne tente donc jamais de l’enregistrer. Les utilisations distantes sont suivies uniquement lorsque l’autre joueur utilise aussi l’addon.
 
