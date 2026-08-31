@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.4.5
+
+- Suppression du balayage du temps de recharge global sur les icônes locales.
+- Utilisation de `GetSpellCooldownDuration(spellID, true)` pour filtrer le GCD côté moteur sans lire de valeur protégée.
+- Les véritables temps de recharge restent affichés normalement.
+
 ## 1.4.4
 
 - Suppression du scan global `EnumerateFrames`, incompatible avec les booléens secrets de Retail 12.1.

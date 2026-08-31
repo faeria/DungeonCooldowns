@@ -9,6 +9,7 @@ Addon WoW Retail 12.1 affichant les principaux temps de recharge défensifs et o
 - Deux lignes par joueur : défensifs en bleu, offensifs en orange.
 - Overlays indépendants ancrés aux `CompactPartyFrame`, sans modifier ni contaminer les cadres protégés de Blizzard.
 - État exact du joueur local via `C_Spell.GetSpellCooldown` et `C_Spell.GetSpellCharges`.
+- Filtrage du GCD : seules les véritables recharges des capacités sont dessinées sur les icônes locales.
 - Détection automatique des talents et remplacements de sorts du joueur local.
 - Synchronisation légère entre membres possédant l’addon : liste des sorts connus et notification d’utilisation.
 - Inspection de la spécialisation comme solution de secours pour déterminer les sorts potentiels.

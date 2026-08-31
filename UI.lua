@@ -362,6 +362,9 @@ function UI:ApplyLayout()
 end
 
 local function IsLocalSpellOnCooldown(spellID)
+    if C_Spell.GetSpellCooldownDuration then
+        return C_Spell.GetSpellCooldownDuration(spellID, true) ~= nil
+    end
     local info = C_Spell.GetSpellCooldown(spellID)
     return info and info.isActive and not info.isOnGCD
 end
@@ -514,11 +517,24 @@ function UI:PositionIcon(icon, entry)
 end
 
 function UI:RefreshLocalIcon(icon)
-    local cooldownInfo = C_Spell.GetSpellCooldown(icon.spellID)
-    if cooldownInfo then
-        icon.cooldown:SetCooldown(cooldownInfo.startTime, cooldownInfo.duration, cooldownInfo.modRate)
+    local cooldownInfo
+    local cooldownDuration
+    if C_Spell.GetSpellCooldownDuration and icon.cooldown.SetCooldownFromDurationObject then
+        -- The second argument excludes the global cooldown inside Blizzard's
+        -- engine, without branching on the protected isOnGCD value in Lua.
+        cooldownDuration = C_Spell.GetSpellCooldownDuration(icon.spellID, true)
+        if cooldownDuration then
+            icon.cooldown:SetCooldownFromDurationObject(cooldownDuration)
+        else
+            icon.cooldown:Clear()
+        end
     else
-        icon.cooldown:Clear()
+        cooldownInfo = C_Spell.GetSpellCooldown(icon.spellID)
+        if cooldownInfo and not cooldownInfo.isOnGCD then
+            icon.cooldown:SetCooldown(cooldownInfo.startTime, cooldownInfo.duration, cooldownInfo.modRate)
+        else
+            icon.cooldown:Clear()
+        end
     end
 
     icon.charges:SetText("")
@@ -527,7 +543,10 @@ function UI:RefreshLocalIcon(icon)
 
     local secretsEnabled = C_Secrets and C_Secrets.HasSecretRestrictions and C_Secrets.HasSecretRestrictions()
     if not secretsEnabled then
-        local active = cooldownInfo and cooldownInfo.isActive and not cooldownInfo.isOnGCD
+        local active = cooldownDuration ~= nil
+        if cooldownInfo then
+            active = cooldownInfo and cooldownInfo.isActive and not cooldownInfo.isOnGCD
+        end
         icon.texture:SetDesaturated(active or false)
         icon.ready:SetShown(not active)
 
