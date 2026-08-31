@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.4.2
+
+- Le mode étendu fonctionne désormais en solo avec les raid frames forcées par le mode d’édition Blizzard.
+- Résolution de l’unité d’une frame via `GetUnit`, `displayedUnit`, `unit` puis `unitToken`.
+- `/dcd status` affiche maintenant le nombre de cooldowns locaux et de frames visibles détectées.
+
 ## 1.4.1
 
 - Correction du fallback local appelé avant la déclaration de la table `known` dans `BuildLocalKnownSpells`.

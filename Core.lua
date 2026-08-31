@@ -59,15 +59,15 @@ function Core:IsDungeonContent()
     if not ns.db or not ns.db.enabled then
         return false
     end
-    if not IsInGroup() or IsInRaid() then
+    if IsInRaid() then
         return false
     end
     local members = GetNumGroupMembers()
-    if members < 1 or members > 5 then
-        return false
-    end
     if ns.db.contentMode == "PARTY" then
-        return true
+        return members <= 5
+    end
+    if not IsInGroup() or members < 1 or members > 5 then
+        return false
     end
     local inInstance, instanceType = IsInInstance()
     return inInstance and instanceType == "party"
@@ -500,9 +500,17 @@ function Core:ToggleTest()
 end
 
 function Core:PrintStatus()
-    local scope = ns.db and ns.db.contentMode == "PARTY" and "tous les groupes de 5" or "donjons à 5"
+    local scope = ns.db and ns.db.contentMode == "PARTY" and "solo ou groupe de 5" or "donjons à 5"
     local mode = self.active and "actif" or "inactif"
-    ns.Print(mode .. " — portée : " .. scope .. " — suivi distant par synchronisation entre utilisateurs de l’addon.")
+    local localState = self.states[UnitGUID("player")]
+    local knownCount = localState and #localState.known or 0
+    local visibleFrames = 0
+    if ns.UI and ns.UI.GetUnitFrames then
+        for _, frame in ipairs(ns.UI:GetUnitFrames()) do
+            if frame:IsVisible() then visibleFrames = visibleFrames + 1 end
+        end
+    end
+    ns.Print(mode .. " — portée : " .. scope .. " — " .. knownCount .. " CDs locaux — " .. visibleFrames .. " frame(s) visible(s).")
 end
 
 function Core:RegisterRuntimeEvents()

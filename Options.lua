@@ -144,10 +144,10 @@ end
 
 function Options:CreateGeneralPage(parent)
     local page = CreateFrame("Frame", nil, parent); page:SetAllPoints()
-    local activation = CreateCard(page, "Activation", "Contrôle global en donjon à cinq joueurs.", 0, 105)
-    self:CreateToggle(activation, "enabled", "Activer Dungeon Cooldowns", "Affichage automatique uniquement dans les contenus à cinq joueurs.", 18, -54)
+    local activation = CreateCard(page, "Activation", "Contrôle global de Dungeon Cooldowns.", 0, 105)
+    self:CreateToggle(activation, "enabled", "Activer Dungeon Cooldowns", "La portée exacte est définie dans le bloc ci-dessous.", 18, -54)
     local scope = CreateCard(page, "Portée", "Détermine où l’affichage réel est activé.", -120, 100)
-    self:CreateCycle(scope, "contentMode", "Contenus pris en charge", {{value="DUNGEON",label="Donjons à 5 uniquement"},{value="PARTY",label="Tous les groupes de 5"}}, 18, -52, 240)
+    self:CreateCycle(scope, "contentMode", "Contenus pris en charge", {{value="DUNGEON",label="Donjons à 5 uniquement"},{value="PARTY",label="Solo ou groupe de 5"}}, 18, -52, 240)
     local display = CreateCard(page, "Éléments affichés", "Choisissez les informations utiles près des cadres.", -235, 220)
     self:CreateToggle(display, "showDefensive", "Cooldowns défensifs", "Ligne bleue des capacités défensives.", 18, -52)
     self:CreateToggle(display, "showOffensive", "Cooldowns offensifs", "Ligne orange des capacités offensives.", 18, -98)

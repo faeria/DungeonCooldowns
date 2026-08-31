@@ -13,7 +13,7 @@ Addon WoW Retail 12.1 affichant les principaux temps de recharge défensifs et o
 - Synchronisation légère entre membres possédant l’addon : liste des sorts connus et notification d’utilisation.
 - Inspection de la spécialisation comme solution de secours pour déterminer les sorts potentiels.
 - Interface de configuration autonome ouverte avec `/dcd`, organisée en pages Général, Apparence et Sorts suivis.
-- Portée configurable entre les donjons à cinq uniquement et tous les groupes de cinq joueurs.
+- Portée configurable entre les donjons à cinq uniquement et le mode solo ou groupe de cinq joueurs.
 - Personnalisation du côté, de l’alignement, des décalages, de la distance à la frame, de la taille, des espacements, de l’opacité, des bordures et du nombre d’icônes.
 - Sélection précise des cooldowns à afficher, organisée par classe et spécialisation, avec choix individuel et actions « tout sélectionner / tout masquer ».
 - Aperçu réaliste directement sur les cadres `CompactPartyFrame` ou `CompactRaidFrame` visibles ; une raid frame de secours est utilisée uniquement lorsqu’aucun cadre Blizzard n’est disponible.

@@ -495,7 +495,11 @@ function UI:RefreshOverlay(unitFrame, overlay)
     end
 
     local isTestPreview = unitFrame.isDungeonCooldownsTest
-    local unit = unitFrame.displayedUnit or unitFrame.unit
+    local unit
+    if unitFrame.GetUnit then
+        unit = unitFrame:GetUnit()
+    end
+    unit = unit or unitFrame.displayedUnit or unitFrame.unit or unitFrame.unitToken
     if not isTestPreview and (not unit or not UnitExists(unit) or not UnitIsPlayer(unit)) then
         overlay:Hide()
         return
